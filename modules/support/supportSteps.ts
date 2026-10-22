@@ -39,6 +39,9 @@ async function chatFrame(page: Page, ms = 20_000): Promise<Frame | undefined> {
   return undefined;
 }
 
+/** The visible message box in the chat frame ("Type here and press enter.."). Tawk.to contains an invisible clone/pre-render textarea in the DOM; we target the visible one. */
+const chatInput = (frame: Frame) => frame.getByPlaceholder(/type here and press enter/i).locator('visible=true').first();
+
 export const supportSteps: Record<string, CaseHandler<RepoPage>> = {
   'SPT-001': async ({ page, input, check, snap }) => {
     await home(page, input);
@@ -64,8 +67,9 @@ export const supportSteps: Record<string, CaseHandler<RepoPage>> = {
       const t = norm(await frame.locator('body').innerText().catch(() => ''));
       note(`Chat window text: ${t.slice(0, 200)}`);
       await check('The chat greets the user ("How can we help?")', () => expect(t).toMatch(/how can we help/i));
-      await check('The message box says "Type here and press enter.."', () => expect(frame.getByPlaceholder(/type here and press enter/i).first()).toBeVisible());
-      await snap('Customer Support chat window', frame.getByPlaceholder(/type here and press enter/i).first());
+      const msgBox = chatInput(frame);
+      await check('The message box says "Type here and press enter.."', () => expect(msgBox).toBeVisible());
+      await snap('Customer Support chat window', msgBox);
     }
     await closeSupport(page);
   },
@@ -284,7 +288,7 @@ export const supportSteps: Record<string, CaseHandler<RepoPage>> = {
     await check('Pressing it minimises the chat window and the page behind it is still usable (nothing is sent)', async () => {
       await minimise.click({ timeout: 5_000 });
       await page.waitForTimeout(1_000);
-      const stillOpen = await frame.getByPlaceholder(/type here and press enter/i).first().isVisible().catch(() => false);
+      const stillOpen = await chatInput(frame).isVisible().catch(() => false);
       expect(stillOpen, 'the chat window is still open after pressing minimise').toBe(false);
       await expect(page).not.toHaveURL(/\/auth\//i);
     });
