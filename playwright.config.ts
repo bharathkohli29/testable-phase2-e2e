@@ -29,6 +29,7 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   outputDir: path.join(RUN_DIR, 'playwright-artifacts'),
   reporter: [['list'], ['html', { outputFolder: path.join(RUN_DIR, 'playwright-report'), open: 'never' }]],
+  globalSetup: './core/runner/globalSetup.ts',
   globalTeardown: './core/reporting/globalTeardown.ts',
   use: {
     browserName: 'chromium',

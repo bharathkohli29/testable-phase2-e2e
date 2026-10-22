@@ -177,8 +177,8 @@ export async function executeCase<P>(o: ExecuteOptions<P>): Promise<CaseOutcome>
 
   if (skipReason) {
     checks.note(skipReason);
-    const shot = await takeEvidence(page, row.id);
-    writeRecord({ ...base, result: 'SKIPPED', actual: checks.text, screenshot: shot, durationMs: Date.now() - started });
+    // a skipped case did nothing on the page, so a picture of it only costs space - no screenshot
+    writeRecord({ ...base, result: 'SKIPPED', actual: checks.text, screenshot: '', durationMs: Date.now() - started });
     if (!o.deferRefresh) await refreshResults(input.writeResultsToInput);
     return { result: 'SKIPPED' };
   }
