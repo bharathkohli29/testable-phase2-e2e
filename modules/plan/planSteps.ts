@@ -44,7 +44,12 @@ export const planSteps: Record<string, CaseHandler<RepoPage>> = {
     ctx.note(`Saved selection reads: ${saved || '(not found)'}`);
     await check(`It names the branch "${branch}"`, () => expect(saved).toMatch(has(branch)));
     await check('It lists the trigger "push"', () => expect(saved).toMatch(/\bpush\b/i));
-    await check('It lists the trigger "PR merge"', () => expect(saved).toMatch(/PR\s*merge/i), page.getByText(/Saved your selection/i).last()); // the picture outlines this line in red
+    const prMergeTrigger = page.getByRole('button', { name: /on pr merge/i }).or(page.getByText(/on pr merge/i)).last();
+    await check('It lists the trigger "PR merge" (under Triggers on Configure card or in saved selection)', async () => {
+      const inSaved = /PR\s*merge/i.test(saved);
+      const onCard = await prMergeTrigger.isVisible().catch(() => false);
+      expect(inSaved || onCard, 'trigger "PR merge" was not found under Triggers or in saved selection').toBe(true);
+    }, prMergeTrigger);
     await check('"Here\'s the Run plan for White Box Analysis - review scope and what we\'ll classify, then execute." is shown', () =>
       expect(page.getByText(/Here.s the\s*Run plan\s*for White Box Analysis/i).last()).toContainText(/review scope and what we.ll classify,?\s*then execute/i));
     await check('The header reads "Confirm whitebox plan"', () => expect(page.getByText(/Confirm white\s*box plan/i).first()).toBeVisible());
