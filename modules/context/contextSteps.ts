@@ -53,9 +53,14 @@ export const contextSteps: Record<string, CaseHandler<RepoPage>> = {
     await check('"Details" opens the panel "Source details"', () => expect(p).toBeVisible());
     const t = norm(await p.innerText().catch(() => ''));
     note(`Source details: ${t}`);
-    const val = (label: string): string => t.match(new RegExp(`${label}\\s+(.+?)(?=\\s+(?:Repository|Branch|Commit|Availability|Elapsed|Status|Technical details)\\b|$)`, 'i'))?.[1]?.trim() ?? '';
+    const val = (label: string): string => {
+      if (/^availability$/i.test(label)) {
+        return t.match(/availability\s+(.+?)(?=\s+(?:elapsed|status|technical details)\b|$)/i)?.[1]?.trim() ?? '';
+      }
+      return t.match(new RegExp(`${label}\\s+(.+?)(?=\\s+(?:Repository|Branch|Commit|Availability|Elapsed|Status|Technical details)\\b|$)`, 'i'))?.[1]?.trim() ?? '';
+    };
     await check(`Repository is "${repoName(repo)}"`, () => expect(val('Repository')).toMatch(has(repoName(repo))));
-    await check(`Branch is "${branch}"`, () => expect(val('Branch')).toMatch(has(branch)));
+    await check(`Branch is "${b.branch || branch}"`, () => expect(val('Branch')).toMatch(has(b.branch || branch)));
     await check('Commit is the same as on the bar', () => expect(val('Commit').toLowerCase()).toContain(b.sha.slice(0, 7).toLowerCase()));
     await check('Availability says the repository and the branch are "Available"', () => expect(val('Availability')).toMatch(/repository:\s*available.*branch:\s*available/i));
     await check('"Elapsed" shows a time (for example 00:00)', () => expect(val('Elapsed')).toMatch(/\d{1,2}:\d{2}/));
