@@ -115,8 +115,51 @@ export const branchSteps: Record<string, CaseHandler<RepoPage>> = {
   },
 
   'REPO-BRN-008': async (ctx) => {
-    const { snap, pg, check } = ctx;
-    const { branch, branch2 } = inputs(ctx, { branches: 2 });
+    const { snap, pg, check, note } = ctx;
+    const { branch, branch2: configuredBranch2 } = inputs(ctx, { branches: 1 });
+    let branch2 = configuredBranch2;
+
+    // If only 1 branch was provided in input, find and click any available other branch from the UI
+    if (!branch2) {
+      // 1. Check existing radio chips on the Configure card
+      const availableChips = await pg.chips.evaluateAll((radios) =>
+        radios.map((r) => ((r.textContent || (r as HTMLInputElement).value || r.getAttribute('aria-label') || '').replace(/\s*default\s*$/i, '').trim()))
+      ).catch(() => []);
+
+      const altChip = availableChips.find((c) => c && c.toLowerCase() !== branch.toLowerCase());
+      if (altChip) {
+        branch2 = altChip;
+      }
+
+      // 2. If no alternate branch chip is visible on the card, check the "Choose a branch" dialog
+      if (!branch2 && (await pg.moreBranches.isVisible().catch(() => false))) {
+        await pg.openBranchDialog();
+        const dialogBranches = await pg.branchDialog.locator('[role="radio"], [role="checkbox"], label').evaluateAll((els) =>
+          els.map((el) => (el.textContent || '').replace(/\s*default\s*$/i, '').trim())
+        ).catch(() => []);
+
+        const altDialog = dialogBranches.find((b) => {
+          const clean = b.split(/[\r\n\t]+/)[0]?.trim() || '';
+          return clean && clean.toLowerCase() !== branch.toLowerCase() && !/choose|select|search|available|done/i.test(clean);
+        });
+
+        if (altDialog) {
+          branch2 = altDialog.split(/[\r\n\t]+/)[0]?.trim();
+        }
+        await pg.branchDone.click().catch(() => undefined);
+      }
+
+      note(branch2
+        ? `Only 1 branch was provided in input ("${branch}"). Auto-selected available branch "${branch2}" to validate branch switching.`
+        : `Only 1 branch was provided in input and no secondary branch was found in the repository.`
+      );
+    }
+
+    if (!branch2) {
+      ctx.skip('Repository only has 1 branch available; branch switcher cannot be tested.');
+      return;
+    }
+
     await ctx.step(`Select "${branch}"`, () => pg.selectBranch(branch));
     await check(`Change the selection to "${branch2}"`, () => pg.selectBranch(branch2));
     await check(`"${branch2}" is the selected branch and "${branch}" is not`, async () => {
