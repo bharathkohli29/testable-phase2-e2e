@@ -12,8 +12,6 @@ export const ASSISTANT_CASES: CaseDef[] = [
     'The headline "Know before you deploy." and "Testable analyzes your code, runtime behavior, and risks to measure production confidence." are shown, with "Start with an analysis" and "Choose one of the analyses below or ask your own question."'),
   row('EAH-002', 'Home - analysis cards', 'Home', ['Read the three cards (none is pressed)'],
     'Code analysis: "Can I safely deploy this commit?" with "Recommended" and "Review the latest changes for release blockers and confidence."; "Where are the biggest security risks?" with "Identify vulnerable code, risky dependencies, and security hotspots." Runtime analysis: "Will my application handle production traffic?" with "Coming soon" (the card is not pressed).'),
-  row('EAH-003', 'Message box and slash commands', 'Composer', ['Read the message box and its buttons', 'Type "/" (nothing is sent), read the list, clear the box'],
-    'The box says "Ask anything, or type / for commands…"; "Attach a file", "Open voice session" and "Send" are shown; typing "/" lists /whitebox, /rerun, /coverage, /failures and /plan with their descriptions and a counter "1 / 500" appears; the box is empty again afterwards.'),
   row('EAH-004', 'Header and connected provider', 'Header', ['Read the header and the footer of the message box'],
     'The header shows "Connected tools: <provider>", "Change repository / branch", "Repository history", "New conversation" and the meter "Executions: n / m" (link to /account); the message box footer says "<provider> connected".'),
   row('EAH-005', 'New conversation', 'Header', ['Press "New conversation"'],

@@ -62,29 +62,9 @@ export const assistantSteps: Record<string, CaseHandler<RepoPage>> = {
     await snap('Analysis cards', [safe, runtime]);
   },
 
-  'EAH-003': async ({ page, input, check, note, snap }) => {
-    await homeState(page, input);
-    const box = composer(page);
-    await check('The message box says "Ask anything, or type / for commands…"', () => expect(box).toHaveAttribute('placeholder', /ask anything,?\s*or type \/ for commands/i));
-    await check('"Attach a file", "Open voice session" and "Send" are shown', async () => {
-      for (const n of [/attach a file/i, /open voice session/i, /^\s*send\s*$/i]) await expect(page.getByRole('button', { name: n }).first()).toBeVisible();
-    });
-    await box.click();
-    await box.fill('/');
-    const cmds = [['/whitebox', 'Inspect code paths and branch coverage'], ['/rerun', 'One-click re-run with previous configuration'], ['/coverage', 'Show requirement → test case mapping score'], ['/failures', 'Explain recent failures and suggest fixes'], ['/plan', 'Preview tools before anything runs']];
-    const t = await bodyText(page);
-    note(`After typing "/": ${cmds.filter(([c]) => t.includes(c)).length} of ${cmds.length} commands listed`);
-    for (const [c, d] of cmds) {
-      await check(`Typing "/" lists ${c} - "${d}"`, () => {
-        expect(t, `${c} is not listed`).toContain(c);
-        expect(t.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '')).toContain(d.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ''));
-      });
-    }
-    await check('A character counter shows "<typed> / 500"', () => expect(t).toMatch(/\b1\s*\/\s*500\b/));
-    await snap('Slash commands in the message box', [box]);
-    await box.fill('');
-    await page.keyboard.press('Escape').catch(() => undefined);
-    await check('The message box is empty again (nothing was sent)', async () => expect(await box.inputValue().catch(() => '')).toBe(''));
+  // EAH-003 was removed per requirements (composer buttons and slash commands deprecated)
+  'EAH-003': async (ctx) => {
+    ctx.skip('EAH-003 was removed from the active test suite (composer action controls deprecated).');
   },
 
   'EAH-004': async ({ page, input, check, snap }) => {

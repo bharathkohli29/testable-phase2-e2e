@@ -100,9 +100,9 @@ defineJourney<RepoPage>({
       ],
     },
     {
-      title: '2 · Assistant home module (headline, analysis cards, slash commands, header, Change repository dialog - nothing is started)',
+      title: '2 · Assistant home module (headline, analysis cards, header, Change repository dialog - nothing is started)',
       timeoutSec: 600, needs: 'login', provides: 'login',
-      steps: [...[1, 2, 3, 4, 5, 6].map(eah), ...qa('Assistant', 'login')],
+      steps: [...[1, 2, 4, 5, 6].map(eah), ...qa('Assistant', 'login')],
     },
     {
       title: '3 · Repo module (home → import repository → choose repository → branch → Confirm)',
