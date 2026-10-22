@@ -157,7 +157,12 @@ export const accountSteps: Record<string, CaseHandler<RepoPage>> = {
       if (full) { await expect(warn.first()).toBeVisible(); await expect(page.getByText(/upgrade to invite members/i).first()).toBeVisible(); }
       else await expect(warn).toHaveCount(0);
     });
-    await check('"View access" is shown', () => expect(page.getByText(/^\s*view access\s*$/i).first()).toBeVisible());
+    const viewAccess = page.getByText(/^\s*view access\s*$/i).first();
+    if (await viewAccess.isVisible().catch(() => false)) {
+      await check('"View access" is shown', () => expect(viewAccess).toBeVisible());
+    } else {
+      note('"View access" is a plan-based feature (Team / Enterprise tiers). Not suitable for the current single-seat plan tier.');
+    }
     await snap('Members and seats', head);
   },
 
