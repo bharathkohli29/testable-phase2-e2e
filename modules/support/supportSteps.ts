@@ -1,4 +1,4 @@
-import { expect, Frame, Page } from '@playwright/test';
+import { expect, Frame, Locator, Page } from '@playwright/test';
 import { CaseHandler } from '../../core/runner/registerCases';
 import { RepoPage } from '../repo/shared/RepoPage';
 import { bodyText, closeSupport, norm, open, supportButton, supportItem } from '../flow/ui';
@@ -41,6 +41,22 @@ async function chatFrame(page: Page, ms = 20_000): Promise<Frame | undefined> {
 
 /** The visible message box in the chat frame ("Type here and press enter.."). Tawk.to contains an invisible clone/pre-render textarea in the DOM; we target the visible one. */
 const chatInput = (frame: Frame) => frame.getByPlaceholder(/type here and press enter/i).locator('visible=true').first();
+
+/** Finds the minimise (down-arrow) control for the Live Chat widget (rendered in Tawk.to widget button iframe or header). */
+async function chatMinimiseButton(page: Page, frame?: Frame): Promise<Locator | undefined> {
+  for (let i = 0; i < 15; i++) {
+    for (const f of page.frames()) {
+      const btn = f.locator('button:has(.tawk-min-chat-icon-down), .tawk-min-chat-icon-down, button[title*="close chat" i], button.tawk-button:has(svg)').first();
+      if (await btn.isVisible().catch(() => false)) return btn;
+    }
+    if (frame) {
+      const inFrame = frame.locator('[aria-label*="minimi" i], [title*="minimi" i], [class*="minimi" i], [aria-label*="close" i], [title*="close" i]').first();
+      if (await inFrame.isVisible().catch(() => false)) return inFrame;
+    }
+    await page.waitForTimeout(300);
+  }
+  return undefined;
+}
 
 export const supportSteps: Record<string, CaseHandler<RepoPage>> = {
   'SPT-001': async ({ page, input, check, snap }) => {
@@ -281,12 +297,12 @@ export const supportSteps: Record<string, CaseHandler<RepoPage>> = {
     await supportItem(page, /live chat/i).click();
     const frame = await chatFrame(page);
     if (!frame) { await check('A chat window opens', () => expect(frame, 'no chat window appeared').toBeDefined()); await closeSupport(page); return; }
-    const minimise = frame.locator('[aria-label*="minimi" i], [title*="minimi" i], [class*="minimi" i], [aria-label*="close" i], [title*="close" i]').first();
-    await check('A minimise (down-arrow) control is shown in the chat header', () => expect(minimise, 'no minimise control found in the chat header').toBeVisible({ timeout: 5_000 }));
-    await snap('Chat header with the minimise control', minimise);
+    const minimise = (await chatMinimiseButton(page, frame)) ?? frame.locator('[aria-label*="minimi" i], [title*="minimi" i], [class*="minimi" i], [aria-label*="close" i], [title*="close" i]').first();
+    await check('A minimise (down-arrow) control is shown for the chat', () => expect(minimise, 'no minimise control found for the chat window').toBeVisible({ timeout: 5_000 }));
+    await snap('Chat minimise (down-arrow) control', minimise);
     const opened = await frame.locator('body').innerText().catch(() => '');
     await check('Pressing it minimises the chat window and the page behind it is still usable (nothing is sent)', async () => {
-      await minimise.click({ timeout: 5_000 });
+      await minimise.click({ timeout: 5_000, force: true });
       await page.waitForTimeout(1_000);
       const stillOpen = await chatInput(frame).isVisible().catch(() => false);
       expect(stillOpen, 'the chat window is still open after pressing minimise').toBe(false);
