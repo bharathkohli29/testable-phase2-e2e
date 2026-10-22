@@ -1,0 +1,7 @@
+node_modules/
+results/
+test-results/
+playwright-report/
+# the input workbook holds real credentials and AWS keys - never commit it
+input/*.xlsx
+"sync*.log`ntestable-input.xlsx.tmp" 

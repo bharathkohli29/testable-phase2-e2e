@@ -1,0 +1,23 @@
+{
+  "name": "testable-phase2-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Phase 2: modular, Excel-driven Playwright tests for Testable",
+  "scripts": {
+    "template": "ts-node scripts/createInputTemplate.ts",
+    "test": "playwright test modules/flow",
+    "test:flow": "playwright test modules/flow",
+    "typecheck": "tsc --noEmit",
+    "report": "playwright show-report",
+    "sync": "ts-node scripts/syncWorkbook.ts",
+    "test:branches": "ts-node scripts/runBranches.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.47.0",
+    "@types/node": "^20.14.0",
+    "exceljs": "^4.4.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4",
+    "xlsx": "^0.18.5"
+  }
+}
