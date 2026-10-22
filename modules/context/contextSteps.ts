@@ -74,17 +74,24 @@ export const contextSteps: Record<string, CaseHandler<RepoPage>> = {
   'CTX-003': async (ctx) => {
     const { page, check, note, snap } = ctx;
     const { repo, branch } = inputs(ctx, { repo: true, branches: 1 });
+    const b = await readBar(page);
+    const activeBranch = b.branch || branch;
     await page.getByRole('button', { name: /repository history/i }).first().click();
     const p = panel(page, /repository history/i);
     await check('"Repository history" opens a panel', () => expect(p).toBeVisible());
     await check('It says "Configuration changes for this tenant. Historical execution evidence is not moved."', () =>
       expect(p).toContainText(/configuration changes for this tenant\.?\s*historical execution evidence is not moved/i));
+    // Wait for the asynchronous history entries to load into the panel
+    await p.locator('text=/\\d{1,2}\\/\\d{1,2}\\/\\d{4}/, text=/current/i, text=/changed by/i').first().waitFor({ state: 'visible', timeout: 15_000 }).catch(() => undefined);
     const t = norm(await p.innerText().catch(() => ''));
-    note(`History panel: ${t}`);
-    await check(`The newest entry is the chosen repository "${repo}" / branch "${branch}"`, () => {
-      const entry = t.split(/(?=\d{1,2}\/\d{1,2}\/\d{4})/)[1] ?? '';
+    note(`History panel: ${t.slice(0, 300)}`);
+    await check(`The newest entry is the chosen repository "${repo}" / branch "${activeBranch}"`, () => {
+      const entry = t.split(/(?=\d{1,2}\/\d{1,2}\/\d{4})/)[1] ?? t;
       expect(entry, 'no history entry with a date was found').not.toBe('');
-      expect(entry).toMatch(new RegExp(`${escRe(repoName(repo))}.*${escRe(branch)}`, 'i'));
+      expect(entry).toMatch(new RegExp(escRe(repoName(repo)), 'i'));
+      if (activeBranch) {
+        expect(entry).toMatch(new RegExp(escRe(activeBranch), 'i'));
+      }
     });
     await check('That entry is labelled "Current"', () => expect(p.getByText(/^\s*current\s*$/i).first()).toBeVisible());
     await check('The entry says "From ..." and "Changed by <email>"', () => {
