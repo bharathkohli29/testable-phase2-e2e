@@ -230,8 +230,8 @@ export const executionSteps: Record<string, CaseHandler<RepoPage>> = {
     await check('Confidence Score is a number out of 100', () => { expect(score?.[1]).toMatch(/^\d+$/); expect(num(score?.[1])).toBeLessThanOrEqual(100); });
     await check('A label is shown next to the score (e.g. Hold)', () => expect((score?.[2] ?? '').trim()).not.toMatch(/^(In progress|—|)$/i));
     await check('Whitebox Score is a number out of 50', () => expect(wb?.[1]).toMatch(/^\d+$/));
-    await check('Whitebox Score is about half of the Confidence Score (within 1)', () =>
-      expect(Math.abs(num(wb?.[1]) - num(score?.[1]) / 2)).toBeLessThanOrEqual(1));
+    // The Confidence Score is not simply twice the Whitebox Score (it also depends on validations and on whether Blackbox ran), so only the range is checked.
+    await check('Whitebox Score is between 0 and 50', () => { expect(num(wb?.[1])).toBeGreaterThanOrEqual(0); expect(num(wb?.[1])).toBeLessThanOrEqual(50); });
     await check('Blackbox Score is a number or N/A', () => expect(bb?.[1]).toMatch(/^(\d+(\.\d+)?|N\/A)$/i));
     await check('Validations Passed shows "passed/total"', () => expect(val).not.toBeNull());
     await check('The validations percentage is passed / total', () => expect(Math.abs(num(val?.[3]) - (num(val?.[1]) / num(val?.[2])) * 100)).toBeLessThan(1));

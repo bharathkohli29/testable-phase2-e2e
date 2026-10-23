@@ -190,7 +190,12 @@ export const dashboardSteps: Record<string, CaseHandler<RepoPage>> = {
     const branchOptions = iBranches >= 0 ? lines.slice(iBranches + 1, iOthers > iBranches ? iOthers : undefined) : [];
     const others = iOthers >= 0 ? lines.slice(iOthers + 1) : [];
     note(`Branches with runs: ${branchOptions.length}; other repositories: ${others.length}.`);
-    await check(`The list has the group "${name} — branches with runs"`, () => expect(iBranches, 'group heading not found').toBeGreaterThanOrEqual(0));
+    // the group only exists when the repository has runs on other branches (the run list says which)
+    const otherBranches = [...new Set((await apiRuns(page, repoId)).runs.map((r) => r.branch_name))].filter((b) => b !== branch);
+    await check(`The list has the group "${name} — branches with runs" (needed only when other branches have runs: ${otherBranches.length})`, () => {
+      if (otherBranches.length === 0) { expect(iBranches, 'no other branch has a run, so the group must not be shown').toBe(-1); return; }
+      expect(iBranches, 'group heading not found').toBeGreaterThanOrEqual(0);
+    });
     await check('The list has the group "Other repositories"', () => expect(iOthers, 'group heading not found').toBeGreaterThanOrEqual(0));
     await check(`Every branch option reads "${name} / <branch>"`, () => branchOptions.forEach((o) => expect(o).toMatch(new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} / \\S+$`))));
     await check('The branches listed are the other branches of this repository that already have a run (run list)', async () => {

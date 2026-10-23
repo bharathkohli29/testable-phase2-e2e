@@ -6,7 +6,7 @@ import { EVIDENCE_DIR, RECORDS_DIR, RUN_DIR } from '../paths';
 import { CaseRecord, InputConfig, Result, TestCaseRow } from '../types';
 import { refreshResults } from '../reporting/resultsWorkbook';
 import { getBlocker, setBlocker } from './blockers';
-import { BlockingFailure, Checks, cleanError, explain, SkipCase } from './checks';
+import { BlockingFailure, Checks, cleanError, explain, SkipCase, type Mark } from './checks';
 
 export interface CaseContext<P> {
   /** The module's page object (locators + actions). */
@@ -20,7 +20,7 @@ export interface CaseContext<P> {
    * Run an assertion and log it in the Actual Result column. A failing check marks the case FAIL but the case
    * CONTINUES with its next checks (use it for anything the following steps do not depend on).
    */
-  check: (description: string, fn: () => unknown | Promise<unknown>, mark?: Locator | Locator[]) => Promise<void>;
+  check: (description: string, fn: () => unknown | Promise<unknown>, mark?: Mark) => Promise<void>;
   /** Like check, but for a step the rest of the case depends on: when it fails the case stops (FAIL). */
   step: (description: string, fn: () => unknown | Promise<unknown>) => Promise<void>;
   /** SKIPPED ("Blocked by <case>") when an earlier case in this run proved the prerequisite is broken (e.g. 'login'). */

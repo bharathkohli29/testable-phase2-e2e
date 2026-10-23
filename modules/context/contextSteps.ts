@@ -63,7 +63,7 @@ export const contextSteps: Record<string, CaseHandler<RepoPage>> = {
     await check(`Branch is "${b.branch || branch}"`, () => expect(val('Branch')).toMatch(has(b.branch || branch)));
     await check('Commit is the same as on the bar', () => expect(val('Commit').toLowerCase()).toContain(b.sha.slice(0, 7).toLowerCase()));
     await check('Availability says the repository and the branch are "Available"', () => expect(val('Availability')).toMatch(/repository:\s*available.*branch:\s*available/i));
-    await check('"Elapsed" shows a time (for example 00:00)', () => expect(val('Elapsed')).toMatch(/\d{1,2}:\d{2}/));
+    await check('"Elapsed" shows a time (for example 1s or 00:00)', () => expect(val('Elapsed')).toMatch(/\d{1,2}:\d{2}|\d+\s*(s|sec|m|min|h)\b/i)); // the site writes it as "1s" (or 00:00)
     await check('"Status" is "Repository ready"', () => expect(val('Status')).toMatch(/repository ready/i));
     await check('"Technical details" is offered', () => expect(p.getByText(/technical details/i).first()).toBeVisible());
     await snap('Source details panel', p);
@@ -86,7 +86,8 @@ export const contextSteps: Record<string, CaseHandler<RepoPage>> = {
     const t = norm(await p.innerText().catch(() => ''));
     note(`History panel: ${t.slice(0, 300)}`);
     await check(`The newest entry is the chosen repository "${repo}" / branch "${activeBranch}"`, () => {
-      const entry = t.split(/(?=\d{1,2}\/\d{1,2}\/\d{4})/)[1] ?? t;
+      // each entry starts with its date, e.g. "10/23/2026, 2:08:00 PM"; the first one is the newest
+      const entry = (t.match(/\d{1,2}\/\d{1,2}\/\d{4},?\s*\d{1,2}:\d{2}[\s\S]*?(?=\d{1,2}\/\d{1,2}\/\d{4},?\s*\d{1,2}:\d{2}|$)/) ?? [''])[0];
       expect(entry, 'no history entry with a date was found').not.toBe('');
       expect(entry).toMatch(new RegExp(escRe(repoName(repo)), 'i'));
       if (activeBranch) {

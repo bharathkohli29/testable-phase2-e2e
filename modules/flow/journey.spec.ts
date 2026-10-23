@@ -61,6 +61,16 @@ async function advance(pg: RepoPage, input: InputConfig, from: Stage, to: Stage)
   const repo = input.get('REPO').trim();
   const branch = nth(input.get('BRANCHES'), 0);
   const wait = Number(input.get('WAIT_MIN') || 5);
+  // A module that needs a FINISHED run (Confidence Engine, Graph, Object ...) can be run alone when the Input sheet has the address of a finished run
+  // (CONFIDENCE_RUN_URL, e.g. https://qa-frontend.testable.cc/confidence-engine?pillar=engine&mode=whitebox&from=ea&runId=...): sign in, open it, done.
+  const runUrl = (input.get('CONFIDENCE_RUN_URL') || '').trim();
+  if (to === 'finished' && runUrl) {
+    if (!input.email || !input.password) { setBlocker('login', 'setup', 'QA_EMAIL / QA_PASSWORD are blank on the Input sheet.'); return; }
+    if (from === 'start') await pg.signInAndOpenHome(input.email, input.password);
+    await pg.page.goto(runUrl);
+    await pg.page.getByText(/PR Confidence Analysis|Confidence Graph|Confidence Object/i).first().waitFor({ state: 'visible', timeout: 60_000 });
+    return;
+  }
   for (const stage of STAGE_ORDER.slice(STAGE_ORDER.indexOf(from) + 1, STAGE_ORDER.indexOf(to) + 1)) {
     if (stage === 'login') {
       if (!input.email || !input.password) {

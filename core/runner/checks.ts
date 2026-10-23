@@ -53,6 +53,12 @@ export function explain(e: unknown): string {
 export class SkipCase extends Error {}
 
 /**
+ * What a failed check should show in its picture: an element, several elements, or a function that is run AFTER the failure
+ * and brings the page to the failing element (opens the right tab, row ...) and returns it.
+ */
+export type Mark = Locator | Locator[] | (() => Promise<Locator | Locator[] | undefined | void>);
+
+/**
  * Thrown when something that every later step (or later test case) depends on did not work
  * (sign-in, repository list, Configure card ...). The case FAILS, stops, and the cases that need the same
  * prerequisite are reported as SKIPPED ("Blocked by ...") instead of failing one by one.
@@ -113,6 +119,8 @@ export class Checks {
   async snap(label: string, target?: Locator | Locator[]): Promise<void> {
     if (this.mainShot) return;
     const t = target ? (Array.isArray(target) ? target : [target]) : this.focusTargets;
+    // a failed check that names no element of its own is photographed on the element this case is about
+    if (this.focusTargets.length === 0 && t.length > 0) this.focusTargets = t;
     this.mainShot = await this.capture('pass', label, t, `${this.caseId}`);
   }
 
@@ -191,9 +199,11 @@ export class Checks {
     this.failureShot = await this.capture('fail', message, this.focusTargets, this.caseId);
   }
 
-  private async markFailure(description: string, mark?: Locator | Locator[]): Promise<void> {
+  private async markFailure(description: string, mark?: Mark): Promise<void> {
     if (this.failureShot || !this.page || !this.caseId) return;
-    const targets = Array.isArray(mark) ? mark : mark ? [mark] : this.focusTargets;
+    let m: Locator | Locator[] | undefined;
+    if (typeof mark === 'function') { try { m = (await mark()) || undefined; } catch { m = undefined; } } else m = mark;
+    const targets = Array.isArray(m) ? m : m ? [m] : this.focusTargets;
     this.failureShot = await this.capture('fail', description, targets, this.caseId);
   }
 
@@ -205,8 +215,8 @@ export class Checks {
    * An assertion that does NOT stop the case: a failure is logged as ✘, the case will be FAIL,
    * and the following checks / steps still run (they do not depend on it).
    */
-  async check(description: string, fn: () => unknown | Promise<unknown>, mark?: Locator | Locator[]): Promise<void> {
-    if (mark && this.focusTargets.length === 0) this.focusTargets = Array.isArray(mark) ? mark : [mark];
+  async check(description: string, fn: () => unknown | Promise<unknown>, mark?: Mark): Promise<void> {
+    if (mark && typeof mark !== 'function' && this.focusTargets.length === 0) this.focusTargets = Array.isArray(mark) ? mark : [mark];
     try {
       await fn();
       this.lines.push(`✔ ${description}`);

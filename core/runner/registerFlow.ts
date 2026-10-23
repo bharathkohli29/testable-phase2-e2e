@@ -147,8 +147,11 @@ export function defineJourney<P>(def: JourneyDefinition<P>): void {
       console.log(`   (workbooks updated in ${Math.round((Date.now() - t1) / 1000)}s)`);
 
       // 3. Remember how far the journey got (only when nothing up to this module's last stage is blocked).
-      const clean = STAGES.slice(0, at(mod.provides) + 1).every((s) => !getBlocker(s));
-      if (mod.resets) session.reached = clean ? at(mod.provides) : -1;
+      // A module whose cases are all Run = N did nothing, so it has not taken the browser anywhere: the journey stays where it was
+      // (otherwise a later module would think a finished run is open and skip its preparation).
+      const clean = n > 0 && STAGES.slice(0, at(mod.provides) + 1).every((s) => !getBlocker(s));
+      if (n === 0) { /* nothing ran in this module */ }
+      else if (mod.resets) session.reached = clean ? at(mod.provides) : -1;
       else if (clean) session.reached = Math.max(session.reached, at(mod.provides));
       console.log(`\n── ${mod.title}: finished; journey is at "${session.reached < 0 ? 'start' : STAGES[session.reached]}" ──`);
     });

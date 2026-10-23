@@ -124,9 +124,11 @@ export const graphSteps: Record<string, CaseHandler<RepoPage>> = {
       });
     }
     await check('"Closed-Loop Intel" is marked COMING SOON', () => expect(comingSoonCard(page).first()).toBeVisible());
-    await check('The header shows the commit (7 hex) and the start of the run id', async () => {
-      expect(norm(await page.locator('body').innerText())).toMatch(new RegExp(`[0-9a-f]{7}\\s*·\\s*${runId(page).slice(0, 8)}`, 'i'));
-    });
+    await check('The header shows the start of the run id ("run fc4e0e16…") and the branch picker shows the branch with the commit (7 hex)', async () => {
+      const t = norm(await page.locator('body').innerText());
+      expect(t, 'run id start in the header').toMatch(new RegExp(`run\\s*${runId(page).slice(0, 8)}`, 'i'));
+      expect(t, 'branch · commit in the branch picker').toMatch(/\S+\s*·\s*[0-9a-f]{7}\b/i);
+    }, [page.getByText(/^\s*run\s+[0-9a-f]{6,}/i).first(), page.getByRole('button', { name: /·\s*[0-9a-f]{7}/i }).first()]);
   },
 
   'GR-003': async (ctx) => {
@@ -300,7 +302,7 @@ export const graphSteps: Record<string, CaseHandler<RepoPage>> = {
     const box = label.locator('xpath=ancestor::*[.//button[normalize-space()="1"]][1]');
     await check('The button for page 1 is enabled', () => expect(box.getByRole('button', { name: /^1$/ }).first()).toBeEnabled());
     const numbers = (await box.getByRole('button', { name: /^\d+$/ }).evaluateAll((els) => els.map((e) => e.textContent))).length;
-    await check('The pager does not list more pages than there are', () => expect(numbers, `${numbers} page buttons for ${m?.[2]} page(s)`).toBeLessThanOrEqual(Math.max(num(m?.[2]), 1)));
+    await check('The pager does not list more pages than there are', () => expect(numbers, `${numbers} page buttons for ${m?.[2]} page(s)`).toBeLessThanOrEqual(Math.max(num(m?.[2]), 1)), box);
     note(`Pager: page ${m?.[1]} of ${m?.[2]}`);
   },
 
@@ -324,27 +326,27 @@ export const graphSteps: Record<string, CaseHandler<RepoPage>> = {
     for (const r of list.slice(0, 10)) {
       const row = rows.filter({ hasText: r.run_id.slice(0, 8) }).first();
       const label = `Run ${r.run_id.slice(0, 8)}`;
-      await check(`${label}: the row is shown with a shortened id ending in "…"`, async () => { await expect(row).toBeVisible(); await expect(row.locator('td').nth(0)).toContainText(/…|\.\.\./); });
+      await check(`${label}: the row is shown with a shortened id ending in "…"`, async () => { await expect(row).toBeVisible(); await expect(row.locator('td').nth(0)).toContainText(/…|\.\.\./); }, row);
       await check(`${label}: Trigger is "${r.trigger_type}"`, async () => {
         const got = (await row.locator('td').nth(1).innerText()).toLowerCase().replace(/[^a-z0-9]/g, '');
         expect(got, 'Trigger cell').toContain(r.trigger_type.toLowerCase().replace(/[^a-z0-9]/g, ''));
-      });
+      }, row.locator('td').nth(1));
       await check(`${label}: Time is the start time (HH:MM)`, async () => {
         const want = [await clock(page, r.started_at), await clock(page, r.created_at)];
         const got = norm(await row.locator('td').nth(3).innerText());
         expect(want.some((w) => got.includes(w)), `shows ${got}, expected one of ${want.join(' / ')}`).toBe(true);
-      });
+      }, row.locator('td').nth(3));
       await check(`${label}: Duration is shown (not "—")`, async () => {
         const got = norm(await row.locator('td').nth(4).innerText());
         expect(got, 'Duration column is empty').not.toMatch(/^(—|–|-|)$/);
-      });
+      }, row.locator('td').nth(4));
       await check(`${label}: Duration is about the ${r.duration_seconds ?? '?'} s in the run API`, async () => {
         const got = norm(await row.locator('td').nth(4).innerText());
         expect(Math.abs(seconds(got) - (r.duration_seconds ?? 0)), `shows "${got}"`).toBeLessThanOrEqual(60);
-      });
-      await check(`${label}: Status shows a rating word`, () => expect(row.locator('td').nth(5)).toHaveText(/\S/));
+      }, row.locator('td').nth(4));
+      await check(`${label}: Status shows a rating word`, () => expect(row.locator('td').nth(5)).toHaveText(/\S/), row.locator('td').nth(5));
       if (r.overall_score !== null) await check(`${label}: Score is ${Math.round(r.overall_score)} (the runs list says ${r.overall_score})`, async () =>
-        expect(Math.abs(num(await row.locator('td').nth(6).innerText()) - r.overall_score!)).toBeLessThanOrEqual(1));
+        expect(Math.abs(num(await row.locator('td').nth(6).innerText()) - r.overall_score!)).toBeLessThanOrEqual(1), row.locator('td').nth(6));
     }
     note(`${list.length} run(s) on this branch in the API; Story column shows: ${(await rows.first().locator('td').nth(2).innerText().catch(() => '')).trim() || '(empty)'}`);
   },

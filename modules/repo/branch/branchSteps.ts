@@ -198,6 +198,7 @@ export const branchSteps: Record<string, CaseHandler<RepoPage>> = {
     await pg.ensurePrMergeTicked().catch(() => undefined);
     note(`Just before Confirm: "On push" ${await pg.onPush.getAttribute('aria-pressed') === 'true' ? 'ticked' : 'NOT ticked'}, "On PR merge" ${await pg.onPrMerge.getAttribute('aria-pressed') === 'true' ? 'ticked' : 'NOT ticked'}.`);
     await check('"Confirm repository" is enabled', () => expect(pg.confirmRepo).toBeEnabled());
+    ctx.focus(pg.confirmRepo.or(pg.reviewBranches).or(page.getByText(/configure repository/i).last())); // if Review branches does not appear, the picture shows the Confirm card (not the top of the page)
     await ctx.step('The "Review branches" card appears after Confirm', () => pg.confirmAndWaitForReview()); // refused / timeout => blocks the rest
     await snap('Review branches card after Confirm repository', pg.reviewBranches);
   },

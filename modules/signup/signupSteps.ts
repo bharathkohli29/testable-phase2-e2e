@@ -50,6 +50,7 @@ async function open(ctx: Ctx, type?: 'organisation' | 'individual'): Promise<voi
   }
   if (!/\/auth\/register/i.test(page.url())) ctx.skip(`The Register page did not open (the address is ${new URL(page.url()).pathname}).`);
   await page.locator('#fullName').waitFor({ state: 'visible', timeout: 30_000 }).catch(() => ctx.skip('The sign-up form did not load.'));
+  ctx.focus(form(page)); // a failed or passed case without an element of its own is photographed on the sign-up form
   if (type) await choose(page, type);
 }
 

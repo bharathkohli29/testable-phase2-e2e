@@ -213,7 +213,7 @@ export const objectSteps: Record<string, CaseHandler<RepoPage>> = {
     await needObject(ctx);
     const { page, check, note } = ctx;
     const v = await read(page);
-    await ctx.snap('The Whitebox Trend chart', page.getByText(/^\s*Whitebox Trend\s*$/i).first().locator('xpath=ancestor::*[.//svg][1]'));
+    await ctx.snap('The Whitebox Trend chart', page.getByText(/^\s*Whitebox Trend\s*$/i).first().locator('xpath=ancestor::*[.//svg][1]').or(page.getByText(/^\s*Whitebox Trend\s*$/i).first()).first());
     note(`Trend header "${v.trendNote}"; marker "${v.wb} WB"; ${v.labels.length} labels.`);
     await check('"Whitebox Trend" is shown', () => anyShown(page.getByText(/^\s*Whitebox Trend\s*$/i)));
     await check('The change figure reads like "N pts"', () => expect(v.trendNote).toMatch(/^[+\-−–]?\s*\d+(\.\d+)?\s*pts?$/i));
@@ -318,14 +318,16 @@ export const objectSteps: Record<string, CaseHandler<RepoPage>> = {
       }
     });
     await check('Each project with a run shows the branch of its latest run', () => {
+      const wrong: string[] = [];
       for (const r of w.latest) {
         const c = v.cards.find((x) => x.name === nameOf.get(r.project_id));
         if (!c && !onePage) continue;
-        // a very long branch name is cut short by the card ("CS_VNET8_SDKMSBUILD_NUGETPACKAGE · 1 day ago"), so the shown part must be the start of the branch
+        // a very long branch name is cut short by the card, so the shown part must be the start of the branch
         const shown = (c?.sub ?? '').split('·')[0].replace(/…|\.\.\./g, '').trim();
-        expect(shown.length > 0 && r.branch_name.toLowerCase().startsWith(shown.toLowerCase()), `${c?.name}: the card shows "${shown}", API branch ${r.branch_name}`).toBe(true);
+        if (!(shown.length > 0 && r.branch_name.toLowerCase().startsWith(shown.toLowerCase()))) wrong.push(`${c?.name ?? nameOf.get(r.project_id)}: the card line says "${c?.sub ?? '(no card)'}" but the latest run in the API is on branch ${r.branch_name}`);
       }
-    });
+      expect(wrong, 'cards whose branch differs from the latest run').toEqual([]);
+    }, page.getByText(/projects domain breakdown/i).first());
     await check('A project without a run is shown as NOT STARTED', () => {
       const withRun = new Set(w.latest.map((r) => nameOf.get(r.project_id)));
       for (const c of v.cards.filter((x) => !withRun.has(x.name))) expect(c.status, `${c.name}`).toBe('NOT STARTED');

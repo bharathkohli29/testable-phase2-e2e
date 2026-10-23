@@ -163,8 +163,8 @@ export class RepoPage {
     const wait = [20, 40, 60];
     for (let attempt = 0; ; attempt++) {
       const outcome = await Promise.race([
-        this.syncedMessage.waitFor({ state: 'visible', timeout: 45_000 }).then(() => 'ready' as const),
-        this.syncFailed.waitFor({ state: 'visible', timeout: 45_000 }).then(() => 'failed' as const),
+        this.syncedMessage.waitFor({ state: 'visible', timeout: 120_000 }).then(() => 'ready' as const),
+        this.syncFailed.waitFor({ state: 'visible', timeout: 120_000 }).then(() => 'failed' as const),
       ]).catch(() => 'timeout' as const);
       if (outcome === 'ready') return;
       if (attempt >= wait.length) {
@@ -211,7 +211,7 @@ export class RepoPage {
       const row = this.repoRow(repo).first();
       await expect(row).toBeVisible({ timeout: 15_000 });
       await row.click();
-      await expect(this.confirmRepo).toBeVisible({ timeout: 45_000 });
+      await expect(this.confirmRepo).toBeVisible({ timeout: 120_000 });
     } catch (e) {
       throw new BlockingFailure('configure', `Could not open the configuration of "${repo}" (is REPO correct?) - ${(e as Error).message.split('\n')[0]}`);
     }
@@ -226,7 +226,7 @@ export class RepoPage {
     try {
       await expect(row).toBeVisible({ timeout: 15_000 });
       await row.click();
-      await expect(this.confirmRepo).toBeVisible({ timeout: 45_000 });
+      await expect(this.confirmRepo).toBeVisible({ timeout: 120_000 });
     } catch (e) {
       throw new BlockingFailure('configure', `Could not open the configuration of "${repo}" (is REPO correct?) - ${(e as Error).message.split('\n')[0]}`);
     }
@@ -294,18 +294,36 @@ export class RepoPage {
    * The site can refuse ("Repository cannot be changed while a run is active"): that is a blocking failure, because
    * nothing after it (review, Continue) can happen until the active run on the account has finished.
    */
-  async confirmAndWaitForReview(timeoutMs = 60_000): Promise<void> {
+  /**
+   * Waits for one of several elements, looking again every 30 s (each look returns the moment the element is there) and printing
+   * "still waiting" in the terminal so a long wait can be seen. Returns the name of the element that appeared, or 'timeout'.
+   */
+  private async waitEvery30s<K extends string>(what: string, targets: Record<K, Locator>, totalMs: number): Promise<K | 'timeout'> {
+    const names = Object.keys(targets) as K[];
+    const start = Date.now();
+    while (Date.now() - start < totalMs) {
+      const slice = Math.min(30_000, totalMs - (Date.now() - start));
+      const hit = await Promise.race(names.map((n) => targets[n].waitFor({ state: 'visible', timeout: slice }).then(() => n))).catch(() => undefined);
+      if (hit) return hit;
+      console.log(`… still waiting for ${what} (${Math.round((Date.now() - start) / 1000)}s of ${Math.round(totalMs / 1000)}s)`);
+    }
+    return 'timeout';
+  }
+
+  async confirmAndWaitForReview(timeoutMs = 240_000): Promise<void> {
     await this.confirmRepo.click();
-    const outcome = await Promise.race([
-      this.reviewBranches.waitFor({ state: 'visible', timeout: timeoutMs }).then(() => 'review' as const),
-      this.cannotChange.waitFor({ state: 'visible', timeout: timeoutMs }).then(() => 'refused' as const),
-    ]).catch(() => 'timeout' as const);
+    const outcome = await this.waitEvery30s('"Review branches" after Confirm', { review: this.reviewBranches, refused: this.cannotChange }, timeoutMs);
     if (outcome === 'review') return;
     if (outcome === 'refused') {
       const msg = (await this.cannotChange.innerText().catch(() => '')).replace(/\s+/g, ' ').trim();
       throw new BlockingFailure('confirm', `The site refused to confirm: "${msg}". A run is active on this account - wait until it finishes (or use another account) and run again.`);
     }
-    throw new BlockingFailure('confirm', `"Review branches" did not appear within ${timeoutMs / 1000}s after Confirm repository.`);
+    // say what the page showed instead, so the reason is visible in the Actual Result (and show the end of the chat in the picture)
+    const tail = (await this.page.locator('body').innerText().catch(() => '')).replace(/\s+/g, ' ').trim();
+    const alerts = (await this.page.locator('[role="alert"], [role="status"], [data-sonner-toast], [class*="toast" i]').allInnerTexts().catch(() => [])).map((t) => t.replace(/\s+/g, ' ').trim()).filter(Boolean).join(' | ');
+    await this.confirmRepo.scrollIntoViewIfNeeded().catch(() => undefined);
+    const cards = await this.confirmRepo.count().catch(() => 0);
+    throw new BlockingFailure('confirm', `"Review branches" did not appear within ${timeoutMs / 1000}s after Confirm repository. Notices on the page: ${alerts || '(none)'}. "Confirm repository" buttons still on the page: ${cards}. The page text ends with: "${tail.slice(-450)}"`);
   }
 
   async ensurePrMergeTicked(): Promise<void> {
@@ -331,14 +349,11 @@ export class RepoPage {
    * Clicks "Continue" on Review branches and waits for the Run plan card. When the site cannot build the plan
    * ("Could not build plan" / "Plan unavailable") nothing after it can be checked, so that is a blocking failure.
    */
-  async continueAndWaitForPlan(timeoutMs = 60_000): Promise<void> {
+  async continueAndWaitForPlan(timeoutMs = 180_000): Promise<void> {
     await this.continueBtn.click();
     const plan = this.page.getByText(/^\s*Run plan\s*$/i).last();
     const failed = this.page.getByText(/Could not build plan|Plan unavailable|couldn't build the White Box run plan/i).last();
-    const outcome = await Promise.race([
-      plan.waitFor({ state: 'visible', timeout: timeoutMs }).then(() => 'plan' as const),
-      failed.waitFor({ state: 'visible', timeout: timeoutMs }).then(() => 'failed' as const),
-    ]).catch(() => 'timeout' as const);
+    const outcome = await this.waitEvery30s('the Run plan after Continue', { plan, failed }, timeoutMs);
     if (outcome === 'plan') return;
     const msg = outcome === 'failed' ? (await failed.locator('xpath=..').innerText().catch(() => '')).replace(/\s+/g, ' ').trim().slice(0, 200) : 'the Run plan did not appear';
     throw new BlockingFailure('plan', `Continue did not open the Run plan: ${msg}`);

@@ -1,4 +1,8 @@
 import { expect, Locator, Page } from '@playwright/test';
+import * as fs from 'fs';
+import * as path from 'path';
+import { pathToFileURL } from 'url';
+import { RUN_DIR } from '../../core/paths';
 import { closeMenus, comingSoonCard, labelText } from '../../core/pages/menus';
 import { apiGet, tenantOf } from '../../core/pages/runApi';
 import { CaseHandler } from '../../core/runner/registerCases';
@@ -194,7 +198,7 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
   'CE-002': async (ctx) => {
     await needPage(ctx);
     const { page, check, snap } = ctx;
-    await snap('Left menu links', page.getByRole('link', { name: exactText('Confidence Engine') }).first());
+    await snap('Left menu with the Workspace links', page.getByRole('navigation', { name: 'Workspace' }));
     for (const [name, href] of [['Dashboard', '/dashboard'], ['Confidence Engine', '/confidence-engine'], ['Execution Assistant', '/execution-assistant'], ['Account and Plan', '/account']] as const) {
       await check(`Left menu link "${name}" is shown and goes to ${href}`, async () => {
         const link = page.getByRole('link', { name: exactText(name) }).first();
@@ -270,7 +274,8 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
     const val = body.match(/Validations Passed\s*(\d+)\s*\/\s*(\d+)\s*\(?(\d+)\s*%/i);
     await check('Validations Passed shows "passed/total" and a percentage', () => expect(val).not.toBeNull());
     if (val) await check('The percentage equals passed / total (rounded)', () => expect(Math.abs(num(val[3]) - Math.round((num(val[1]) / num(val[2])) * 100))).toBeLessThanOrEqual(1));
-    await check('No score card still says "In progress"', () => expect(labelText(page, 'In progress')).toHaveCount(0));
+    // only the four score cards are read (the chat title on the left may say "In progress" - that is checked by CE-019)
+    await check('No score card still says "In progress"', () => expect(body.match(/Confidence Score[\s\S]*?Validations Passed[\s\S]{0,60}/i)?.[0] ?? '').not.toMatch(/in progress/i));
     const scores = await runApi(page, 'scores');
     await check('The scores API answers for this run', () => expect(scores.error).toBeUndefined());
     await check('The score status from the API is OK', () => expect(String(scores.score_status).toUpperCase()).toBe('OK'));
@@ -345,16 +350,33 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
   'CE-011': async (ctx) => {
     const { check, note, skip } = ctx;
     if (!walked.rows.length) skip('No table rows were read (the four tab cases CE-007 to CE-010 did not run), so there is nothing to compare.');
-    const bad = (label: string, rows: Row[], expectFn: (r: Row) => boolean): Promise<void> =>
-      check(label, () => {
-        const wrong = rows.filter((r) => !expectFn(r));
+    const { page } = ctx;
+    if (await page.locator('table').first().isVisible().catch(() => false)) await ctx.snap('A classification table (all rows of the four tabs were compared)', page.locator('table').first());
+    // Shows the FAILING rows in the picture: opens the tab, category and gate of the first wrong row and outlines every wrong row of that table.
+    const showRows = async (wrong: Row[]): Promise<Locator[] | undefined> => {
+      const first = wrong[0];
+      const t = TABS.find((x) => x.button === first?.tab);
+      if (!first || !t || !/\/confidence-engine/.test(page.url())) return undefined;
+      await openTab(page, t);
+      await selectCategory(page, t, first.category);
+      if (first.gate) await gateBox(page, t).getByRole('button').filter({ hasText: exactText(first.gate) }).first().click();
+      await page.locator('table tbody tr').first().waitFor({ state: 'attached', timeout: 8_000 });
+      const names = new Set(wrong.filter((r) => r.tab === first.tab && r.category === first.category && r.gate === first.gate).map((r) => r.name));
+      const rowsHere = page.locator('table tbody tr').filter({ has: page.locator('td:first-child').filter({ hasText: new RegExp(`^\\s*(${[...names].map(esc).join('|')})\\s*$`) }) });
+      const n = await rowsHere.count();
+      return n ? Array.from({ length: Math.min(n, 8) }, (_, i) => rowsHere.nth(i)) : [page.locator('table').first()];
+    };
+    const bad = async (label: string, rows: Row[], expectFn: (r: Row) => boolean): Promise<void> => {
+      const wrong = rows.filter((r) => !expectFn(r));
+      await check(label, () => {
         expect(wrong.map((r) => `${r.tab} › ${r.category}${r.gate ? ' › ' + r.gate : ''} › ${r.name} (${r.value} → ${r.result})`), 'rows that break the rule').toEqual([]);
-      });
+      }, () => showRows(wrong));
+    };
     const rows = walked.rows;
     const withLimit = rows.filter((r) => /^-?\d+(\.\d+)?\s*[≤≥<>]=?\s*-?\d+(\.\d+)?$/.test(r.value));
     await bad('Every Result is PASS, FAIL, WARN or N/A', rows, (r) => /^(PASS|FAIL|WARN|WARNING|N\/A)$/i.test(r.result));
     await bad('Every Coverage is a percentage or N/A', rows, (r) => /^(\d{1,3}(\.\d+)?\s*%|N\/A)$/i.test(r.coverage));
-    await bad('Every Execution status icon that has a label says "Execution completed" or "Not Applicable" (or that the check was not executed)', rows, (r) => r.exec === '' || /^\s*(Execution completed|Not Applicable|Not executed|Execution not applicable)\s*$/i.test(r.exec));
+    await bad('Every Execution status icon that has a label says "Execution completed" or "Not Applicable" (or "Not Started" / "Not Scheduled" / not executed, which go with an N/A result)', rows, (r) => r.exec === '' || /^\s*(Execution completed|Not Applicable|Execution not applicable)\s*$/i.test(r.exec) || (/^\s*(Not Started|Not Scheduled|Not executed|Not Run|Mutation Not Run|Not .*)\s*$/i.test(r.exec) && r.result === 'N/A'));
     note(`Execution status labels seen: ${[...new Set(rows.map((r) => r.exec || '(no label)'))].join(' | ')}`);
     await bad('Rows with the value N/A or "—" have the result N/A', rows, (r) => !/^(N\/A|—)$/i.test(r.value) || r.result === 'N/A');
     await bad('Rows with a number as value have the result PASS, FAIL or WARN', rows, (r) => !/^-?\d/.test(r.value) || /^(PASS|FAIL|WARN|WARNING)$/i.test(r.result));
@@ -575,11 +597,11 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
     await check('The top of the left pane says "Whitebox complete"', () => expect(pane).toMatch(/whitebox complete/i));
     await check('It names the repository and branch and says to continue the Execution Assistant thread while reviewing results', () =>
       expect(pane).toMatch(/\S+\/\S+\s*·\s*\S+.*continue the execution assistant thread/i));
-    await check('The thread has the final messages "Execution finished" and "Run complete" in this order', () => {
-      const a = pane.search(/execution finished/i), b = pane.search(/run complete/i);
-      expect(a, '"Execution finished" is not in the thread').toBeGreaterThanOrEqual(0);
+    await check('The thread has the final message "Run complete" (and "Execution finished" before it when that line is there)', () => {
+      const a = text.search(/execution finished/i), b = text.search(/run complete/i); // the whole page text: the left pane cut can lose the end of the thread
       expect(b, '"Run complete" is not in the thread').toBeGreaterThanOrEqual(0);
-      expect(b).toBeGreaterThan(a);
+      if (a >= 0) expect(b, '"Run complete" comes before "Execution finished"').toBeGreaterThan(a);
+      else note('The thread shows "Run complete" as the final message; the older "Execution finished" line is not in the thread of this run (it only appears when the run was watched live).');
     });
     await check('Every message has a time (for example 4:22 PM) and the times never go backwards', () => {
       const mins = [...pane.matchAll(/\b(\d{1,2}):(\d{2})\s?(AM|PM)\b/gi)].map((m) => ((Number(m[1]) % 12) + (/pm/i.test(m[3]) ? 12 : 0)) * 60 + Number(m[2]));
@@ -620,4 +642,265 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
       await page.mouse.up();
     }
   },
+};
+
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// Search box, metric dialog, assistant question and the taxonomy report.
+// A case is SKIPPED only when it cannot be reached or carried out (no finished run open, report not downloaded...).
+// When it can be carried out and the page does not do what the sheet says, it FAILS.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+/** The downloaded taxonomy report, shared by TAXONOMY-01 .. 07. */
+const report: { file: string; html: string; text: string; runId: string } = { file: '', html: '', text: '', runId: '' };
+const DOWNLOAD_BUTTON = (page: Page): Locator => page.getByRole('button', { name: /Download full taxonomy gate report/i }).first();
+
+/** Opens the downloaded HTML report in a second tab (file://) and returns it; the caller closes it. */
+async function openReport(page: Page): Promise<Page> {
+  const rp = await page.context().newPage();
+  await rp.goto(pathToFileURL(report.file).href);
+  return rp;
+}
+
+/**
+ * Clicks "Download full taxonomy gate report", saves the file under results/run_<time>/downloads/ and reads it.
+ * Every taxonomy case calls this itself (the file of the same run is downloaded again, so each case stands on its own).
+ */
+async function downloadReport(page: Page): Promise<{ file: string; name: string }> {
+  const btn = DOWNLOAD_BUTTON(page);
+  await expect(btn, '"Download full taxonomy gate report" is not on the page').toBeVisible({ timeout: 15_000 });
+  const dir = path.join(RUN_DIR, 'downloads');
+  fs.mkdirSync(dir, { recursive: true });
+  const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 90_000 }), btn.click()]);
+  const name = dl.suggestedFilename();
+  const file = path.join(dir, `${new Date().toISOString().replace(/[:.]/g, '-')}_${name}`);
+  await dl.saveAs(file);
+  report.file = file; report.runId = runId(page);
+  report.html = fs.readFileSync(file, 'utf8');
+  return { file, name };
+}
+
+/** A taxonomy case: downloads the report (a failed download FAILS the case), opens the saved file in a second tab and checks inside it. */
+const reportCase = (fn: (ctx: Parameters<CaseHandler<RepoPage>>[0], rp: Page) => Promise<void>): CaseHandler<RepoPage> => async (ctx) => {
+  await needPage(ctx);
+  const { page, check, note, snap } = ctx;
+  await snap('Download full taxonomy gate report button', DOWNLOAD_BUTTON(page));
+  let name = '';
+  await check('Clicking "Download full taxonomy gate report" downloads the report file', async () => { name = (await downloadReport(page)).name; }, DOWNLOAD_BUTTON(page));
+  if (!name) return; // nothing was downloaded, so nothing inside it can be checked (the failed check above makes the case FAIL)
+  note(`Downloaded ${name} and opened the saved file to check inside it`);
+  const rp = await openReport(page);
+  try { report.text = norm(await rp.locator('body').innerText()); await fn(ctx, rp); } finally { await rp.close().catch(() => undefined); }
+};
+
+export const reportSteps: Record<string, CaseHandler<RepoPage>> = {
+  'CONFENG-09': async (ctx) => {
+    await needPage(ctx);
+    const { page, check, note, snap } = ctx;
+    await ctx.step('Open the "Code Intelligence" tab', () => openTab(page, TABS[0]));
+    const box = page.getByRole('searchbox').or(page.getByPlaceholder(/search/i)).or(page.locator('input[type="search"]')).first();
+    await snap('Confidence Engine gates area (looking for the search box)', box.or(gateBox(page, TABS[0])).first());
+    await check('A search box for the gates is shown on the Confidence Engine page', () => expect(box).toBeVisible({ timeout: 5_000 }));
+    if (!(await box.isVisible().catch(() => false))) return;
+    const gates = await listGates(page, TABS[0]);
+    const term = (gates[0] ?? walked.rows[0]?.name ?? 'Coverage').split(/\s+/)[0];
+    const countBefore = (await gateBox(page, TABS[0]).getByRole('button').count().catch(() => 0)) || (await page.locator('table tbody tr').count());
+    await box.fill(term);
+    await page.waitForTimeout(800);
+    note(`Searched for "${term}"; items before: ${countBefore}`);
+    await check(`Typing "${term}" keeps only the gates / rows that match it`, async () => {
+      const shown = (await gateBox(page, TABS[0]).getByRole('button').allInnerTexts().catch(() => [])).map(norm).filter(Boolean);
+      const rows = (await page.locator('table tbody tr td:first-child').allInnerTexts()).map(norm).filter(Boolean);
+      const items = shown.length ? shown : rows;
+      expect(items.length, 'nothing is left after the search').toBeGreaterThan(0);
+      expect(items.filter((t) => !new RegExp(esc(term), 'i').test(t)), `items that do not contain "${term}"`).toEqual([]);
+    }, box);
+    await box.fill('');
+    await page.waitForTimeout(500);
+    await check('Clearing the search box shows all gates again', async () => {
+      const n = (await gateBox(page, TABS[0]).getByRole('button').count().catch(() => 0)) || (await page.locator('table tbody tr').count());
+      expect(n).toBe(countBefore);
+    }, box);
+  },
+
+  'CONFENG-20': async (ctx) => {
+    await needPage(ctx);
+    const { page, check, note, snap } = ctx;
+    await ctx.step('Open the "Code Intelligence" tab', () => openTab(page, TABS[0]));
+    await page.locator('table tbody tr').first().waitFor({ state: 'visible', timeout: 15_000 }).catch(() => undefined);
+    const rows = page.locator('table tbody tr');
+    if ((await rows.count()) === 0) ctx.skip('The metric table has no rows on this page, so there is no chevron to click.');
+    // prefer a row that has a value
+    let idx = 0;
+    const n = await rows.count();
+    for (let i = 0; i < n; i++) if (!/^(—|N\/A|)$/i.test(norm(await rows.nth(i).locator('td').nth(1).innerText()))) { idx = i; break; }
+    const row = rows.nth(idx);
+    const name = norm(await row.locator('td').first().innerText());
+    note(`Clicked the chevron of "${name}"`);
+    await ctx.step(`Click the chevron of "${name}"`, async () => { await row.scrollIntoViewIfNeeded(); await row.locator('td').last().click(); });
+    const dlg = page.getByRole('dialog').first();
+    await check('A dialog opens', () => expect(dlg).toBeVisible({ timeout: 10_000 }), row);
+    if (!(await dlg.isVisible().catch(() => false))) return;
+    await snap(`Metric detail dialog of "${name}"`, dlg);
+    await check(`The dialog names the metric "${name}"`, () => expect(dlg).toContainText(new RegExp(esc(name), 'i')));
+    await check('The dialog shows the gate name', () => expect(norm(String(dlg.innerText())).length).toBeGreaterThan(name.length + 5));
+    for (const label of ['Value', 'Status', 'Coverage']) await check(`The dialog shows "${label}"`, () => expect(dlg.getByText(new RegExp(`^\\s*${label}\\s*$`, 'i')).first()).toBeVisible());
+    await check('The dialog shows a coverage bar', () => expect(dlg.locator('[role="progressbar"], [class*="progress" i], [class*="bar" i]').first()).toBeVisible());
+    await check('The dialog has a "Leaf metrics" table with the columns metric, value, result and coverage', async () => {
+      await expect(dlg.getByText(/leaf metrics/i).first()).toBeVisible();
+      const heads = (await dlg.locator('th').allInnerTexts()).map((h) => norm(h).toLowerCase());
+      for (const c of ['metric', 'value', 'result', 'coverage']) expect(heads.some((h) => h.includes(c)), `column ${c} (columns: ${heads.join(', ')})`).toBe(true);
+    });
+    await check('The X button closes the dialog', async () => {
+      await dlg.getByRole('button', { name: /close|×|x/i }).first().click();
+      await expect(dlg).toBeHidden({ timeout: 5_000 });
+    });
+  },
+
+  'CONFASST-04': async (ctx) => {
+    await needPage(ctx);
+    const { page, check, note, snap } = ctx;
+    const box = page.getByRole('textbox', { name: /ask a confidence question/i }).or(page.getByPlaceholder(/ask a confidence question/i)).first();
+    const question = 'Which gates failed for this run?';
+    await snap('The question box', box);
+    await check('The question box "Ask a confidence question" is shown', () => expect(box).toBeVisible());
+    if (!(await box.isVisible().catch(() => false))) return;
+    const before = norm(await page.locator('body').innerText()).length;
+    await box.fill(question);
+    await box.press('Enter');
+    note(`Sent the question: "${question}"`);
+    await check('The question appears in the thread', () => expect(page.getByText(question, { exact: false }).first()).toBeVisible({ timeout: 15_000 }), box);
+    await check('A reply follows the question (new text appears below it within 2 minutes)', async () => {
+      await expect.poll(async () => norm(await page.locator('body').innerText()).length, { timeout: 120_000, intervals: [2_000] }).toBeGreaterThan(before + question.length + 40);
+    }, page.getByText(question, { exact: false }).last());
+  },
+
+  'CONFASST-05': async (ctx) => {
+    await needPage(ctx);
+    const { page, check, note, snap } = ctx;
+    const text0 = norm(await page.locator('body').innerText());
+    if (!/which gates failed for this run/i.test(text0)) ctx.skip('The question of CONFASST-04 was not sent in this run (CONFASST-04 did not run), so there is no reply to read.');
+    const scores = await runApi(page, 'scores');
+    const thread = norm(await page.locator('body').innerText());
+    const after = thread.slice(thread.toLowerCase().lastIndexOf('which gates failed for this run') + 30);
+    await snap('The reply to the question', page.getByText(/which gates failed for this run/i).last());
+    note(`Reply starts: ${after.slice(0, 300)}`);
+    await check('The reply names a gate, testing type, score or metric of this run', () => {
+      const names = [...TABS.map((t) => t.button), ...walked.rows.slice(0, 200).map((r) => r.name), String(scores.overall_score ?? '')].filter((x) => x && x.length > 2);
+      expect(names.some((n) => new RegExp(esc(n), 'i').test(after)), 'the reply mentions none of the gates, scores or metrics shown on the page').toBe(true);
+    });
+  },
+
+  'TAXONOMY-01': async (ctx) => {
+    await needPage(ctx);
+    const { page, check, note, snap } = ctx;
+    const id = runId(page);
+    await snap('Download full taxonomy gate report button', DOWNLOAD_BUTTON(page));
+    let got: { file: string; name: string } | undefined;
+    await check('Clicking "Download full taxonomy gate report" downloads a file', async () => { got = await downloadReport(page); note(`Downloaded ${got.name}`); }, DOWNLOAD_BUTTON(page));
+    if (!got) return;
+    const { name } = got;
+    await check(`The file is named taxonomy-gate-${id}.html`, () => expect(name).toMatch(new RegExp(`^taxonomy-gate-${esc(id)}\\.html$`, 'i')));
+    const rp = await openReport(page);
+    try {
+      report.text = norm(await rp.locator('body').innerText());
+      await check('The saved file opens as an HTML page with a title', async () => { expect(report.text.length, 'empty report').toBeGreaterThan(20); expect(report.html).toMatch(/<title>[^<]+<\/title>|<h1[\s>]/i); });
+      await check('The report shows a generated timestamp', () => expect(report.text).toMatch(/generated[^]{0,40}\d{4}|\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}|\d{1,2}\/\d{1,2}\/\d{4}/i));
+    } finally { await rp.close().catch(() => undefined); }
+  },
+
+  'TAXONOMY-02': reportCase(async (ctx, rp) => {
+    const { page, check, note } = ctx;
+    const t = norm(await rp.locator('body').innerText());
+    const id = runId(page);
+    const summary = await runApi(page, 'summary');
+    const scores = await runApi(page, 'scores');
+    const head = norm(await page.locator('body').innerText());
+    const commit = (head.match(/\b([0-9a-f]{7})\s*·\s*[0-9a-f]{8}/i) ?? [])[1] ?? '';
+    const { repo, branch } = { repo: String((ctx as unknown as { input: { repo?: string } }).input?.repo ?? ''), branch: new URL(page.url()).searchParams.get('branch') ?? '' };
+    note(`Report text starts: ${t.slice(0, 300)}`);
+    await check('The report shows the Run ID', () => expect(t.toLowerCase()).toContain(id.toLowerCase().slice(0, 8)));
+    await check('The report shows the commit of the run', () => expect(t.toLowerCase()).toContain(commit.toLowerCase()));
+    await check('The report shows the repository', () => expect(t).toMatch(new RegExp(esc((repo || String(summary.repo_name ?? summary.repository ?? '')).split('/').pop() ?? ''), 'i')));
+    if (branch) await check('The report shows the branch', () => expect(t).toContain(branch));
+    await check('The report shows the run status (completed)', () => expect(t).toMatch(/completed/i));
+    for (const label of [/gate status/i, /pipeline gate/i, /whitebox confidence/i, /blackbox confidence/i, /weighted/i, /unweighted/i])
+      await check(`The report has "${String(label).slice(1, -2)}"`, () => expect(t).toMatch(label));
+    await check('The Whitebox Confidence in the report (unweighted) equals the Whitebox figure of the Confidence Engine', () => {
+      const wb = (head.match(/Whitebox Score\s*(\d+(?:\.\d+)?)/i) ?? [])[1] ?? String(scores.whitebox_score ?? '');
+      expect(wb, 'Whitebox figure not found on the page').not.toBe('');
+      expect(t, `the report does not contain the Whitebox figure ${wb}`).toContain(String(Math.round(Number(wb))));
+    });
+  }),
+
+  'TAXONOMY-03': reportCase(async (ctx, rp) => {
+    const { check } = ctx;
+    const t = norm(await rp.locator('body').innerText());
+    if (!walked.rows.length) ctx.skip('The Confidence Engine tables were not read in this run (CE-007 to CE-010 did not run), so there is nothing to compare with.');
+    for (const tab of TABS) await check(`The report has a section for "${tab.button}" with a score out of 100`, () => {
+      expect(t).toMatch(new RegExp(esc(tab.button), 'i'));
+      expect(t).toMatch(/\d+(\.\d+)?\s*\/\s*100/);
+    });
+    await check('The report has tables with the columns Classification, Value, Execution status, Result and Coverage', async () => {
+      const heads = (await rp.locator('th').allInnerTexts()).map((h) => norm(h).toLowerCase());
+      for (const c of COLUMNS) expect(heads.some((h) => h.includes(c.toLowerCase())), `column ${c}`).toBe(true);
+    });
+    await check('Every classification read from the Confidence Engine is in the report', () => {
+      const missing = [...new Set(walked.rows.map((r) => r.name))].filter((n) => !t.toLowerCase().includes(n.toLowerCase()));
+      expect(missing, 'classifications missing from the report').toEqual([]);
+    });
+  }),
+
+  'TAXONOMY-04': reportCase(async (ctx, rp) => {
+    const { check, note } = ctx;
+    if (!walked.rows.length) ctx.skip('The Confidence Engine tables were not read in this run (CE-007 to CE-010 did not run), so there is nothing to compare with.');
+    const reportRows = (await rp.locator('table tbody tr').evaluateAll((trs) => trs.map((tr) => Array.from(tr.querySelectorAll('td')).map((td) => (td.textContent ?? '').replace(/\s+/g, ' ').trim())))).filter((r) => r.length >= 4);
+    const unique = new Map(walked.rows.map((r) => [`${r.name}|${r.result}`, r]));
+    note(`${walked.rows.length} rows read in the UI (${unique.size} different classification + result pairs); ${reportRows.length} rows in the report. The "Metric Analysis" sheet is not part of this suite, so the UI is compared with the report only.`);
+    await check('The report has table rows', () => expect(reportRows.length).toBeGreaterThan(0));
+    await check('Every UI classification has a report row with the same Result', () => {
+      const bad = [...unique.values()].filter((r) => !reportRows.some((c) => c[0]?.toLowerCase() === r.name.toLowerCase() && c.some((x) => x.toUpperCase() === r.result))).map((r) => `${r.name} (${r.result})`);
+      expect(bad.slice(0, 15), 'classifications whose Result differs or is missing in the report').toEqual([]);
+    });
+  }),
+
+  'TAXONOMY-05': reportCase(async (ctx, rp) => {
+    const { check, note, skip } = ctx;
+    const failRows = rp.locator('table tbody tr').filter({ hasText: /\bFAIL\b/ });
+    if ((await failRows.count()) === 0) skip('The report of this run has no FAIL row, so there is no evidence link to look for.');
+    note(`${await failRows.count()} FAIL rows in the report`);
+    await check('A FAIL row has evidence links', () => expect(failRows.first().locator('a[href]').first()).toBeVisible());
+    await check('The evidence links give a file path and a line number', async () => {
+      const t = norm(await failRows.first().innerText());
+      const hrefs = await failRows.first().locator('a[href]').evaluateAll((as) => as.map((a) => a.getAttribute('href') ?? ''));
+      expect(t + ' ' + hrefs.join(' ')).toMatch(/[\w./-]+\.\w+[:#L]+\d+|#L\d+/);
+    }, failRows.first());
+  }),
+
+  'TAXONOMY-06': reportCase(async (ctx, rp) => {
+    const { page, check, note, skip } = ctx;
+    const links = await rp.locator('a[href*="github.com"]').evaluateAll((as) => as.map((a) => a.getAttribute('href') ?? ''));
+    if (links.length === 0) skip('The report has no GitHub evidence link, so there is nothing to open.');
+    const head = norm(await page.locator('body').innerText());
+    const commit = (head.match(/\b([0-9a-f]{7})\s*·\s*[0-9a-f]{8}/i) ?? [])[1] ?? '';
+    note(`${links.length} GitHub links; first: ${links[0]}`);
+    await check('The evidence link points to a file at the analysed commit', () => expect(links[0].toLowerCase()).toContain(commit.toLowerCase()));
+    await check('The evidence link names a line to highlight (#L<number>)', () => expect(links[0]).toMatch(/#L\d+/));
+    note('The link is checked by its address; GitHub itself is not opened (the repository may need a GitHub sign-in).');
+  }),
+
+  'TAXONOMY-07': reportCase(async (ctx, rp) => {
+    const { check, note, skip } = ctx;
+    const naRows = rp.locator('table tbody tr').filter({ hasText: /\bN\/A\b/ });
+    if ((await naRows.count()) === 0) skip('The report of this run has no N/A row, so there is nothing "not measured" to look for.');
+    note(`${await naRows.count()} rows with N/A in the report`);
+    await check('A row with the value N/A also has the Result N/A', async () => {
+      const cells = (await naRows.first().locator('td').allInnerTexts()).map(norm);
+      expect(cells.filter((c) => /^N\/A$/i.test(c)).length, `cells: ${cells.join(' | ')}`).toBeGreaterThanOrEqual(2);
+    }, naRows.first());
+    await check('The report says the classification was not measured', async () => {
+      const t = norm(await rp.locator('body').innerText());
+      expect(t).toMatch(/not measured|not executed|not applicable|not run/i);
+    });
+  }),
 };

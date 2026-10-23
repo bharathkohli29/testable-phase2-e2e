@@ -16,8 +16,9 @@ function providers(text: string | undefined): Array<{ name: string; domain: stri
 }
 
 export const ssoHandlers: Record<string, CaseHandler<SsoLoginPage>> = {
-  'LOGIN-SSO-001': async ({ pg, check }) => {
+  'LOGIN-SSO-001': async ({ pg, check, snap }) => {
     await pg.open();
+    await snap('"Sign in with SSO" control (closed)', pg.trigger);
     await check('"Sign in with SSO" control is visible', () => expect(pg.trigger).toBeVisible());
     await check('Control is enabled', () => expect(pg.trigger).toBeEnabled());
     await check('It announces a list (aria-haspopup=listbox)', () => expect(pg.trigger).toHaveAttribute('aria-haspopup', 'listbox'));
@@ -25,10 +26,11 @@ export const ssoHandlers: Record<string, CaseHandler<SsoLoginPage>> = {
     await check('The provider list is not shown yet', () => expect(pg.list).toBeHidden());
   },
 
-  'LOGIN-SSO-002': async ({ pg, data, check, note }) => {
+  'LOGIN-SSO-002': async ({ pg, data, check, note, snap }) => {
     const expected = providers(data.providers);
     await pg.open();
     await pg.trigger.click();
+    await snap('SSO provider list open', [pg.trigger, pg.list]);
     await check('Clicking opens the list (aria-expanded=true)', () => expect(pg.trigger).toHaveAttribute('aria-expanded', 'true'));
     await check('Provider list is visible and labelled "SSO Providers"', async () => {
       await expect(pg.list).toBeVisible();
@@ -44,11 +46,12 @@ export const ssoHandlers: Record<string, CaseHandler<SsoLoginPage>> = {
     note(`Providers shown: ${(await pg.options.allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').trim()).join(' / ')}`);
   },
 
-  'LOGIN-SSO-003': async ({ pg, page, input, data, check, note }) => {
+  'LOGIN-SSO-003': async ({ pg, page, input, data, check, note, snap }) => {
     const provider = data.provider ?? 'Okta';
     const app = new AppShell(page, input.baseUrl);
     await pg.open();
     await pg.choose(provider);
+    await snap(`Form after choosing ${provider} (submit button changed)`, pg.submit);
     await check('The list closes after choosing', () => expect(pg.list).toBeHidden());
     await check(`Submit button now reads "${pg.submitLabel(provider)}"`, () =>
       expect(pg.submit).toHaveAccessibleName(new RegExp(`^${pg.submitLabel(provider)}`, 'i')));
@@ -64,9 +67,10 @@ export const ssoHandlers: Record<string, CaseHandler<SsoLoginPage>> = {
     });
   },
 
-  'LOGIN-SSO-004': async ({ pg, data, check }) => {
+  'LOGIN-SSO-004': async ({ pg, data, check, focus }) => {
     const names = providers(data.providers).map((p) => p.name);
     await pg.open();
+    focus(pg.submit);
     for (const name of names) {
       await check(`Choosing "${name}" changes the button to "${pg.submitLabel(name)}"`, async () => {
         await pg.choose(name);
@@ -75,8 +79,9 @@ export const ssoHandlers: Record<string, CaseHandler<SsoLoginPage>> = {
     }
   },
 
-  'LOGIN-SSO-006': async ({ pg, check }) => {
+  'LOGIN-SSO-006': async ({ pg, check, focus }) => {
     await pg.open();
+    focus(pg.trigger);
     await pg.trigger.click();
     await check('The first click opens the provider list', () => expect(pg.list).toBeVisible());
     await pg.trigger.click();
@@ -86,12 +91,13 @@ export const ssoHandlers: Record<string, CaseHandler<SsoLoginPage>> = {
     });
   },
 
-  'LOGIN-SSO-005': async ({ pg, page, input, data, check, step, skip }) => {
+  'LOGIN-SSO-005': async ({ pg, page, input, data, check, step, skip, focus }) => {
     const email = data.email ?? '';
     const password = data.password ?? '';
     if (!email || !password) skip('No SSO test account in the Input sheet (SSO_EMAIL / SSO_PASSWORD) - code is ready, not executed.');
     const app = new AppShell(page, input.baseUrl);
     const origin = new URL(input.baseUrl).origin;
+    focus(app.signOutButton);
     await pg.open();
     await pg.choose(data.provider ?? 'Okta');
     await pg.email.fill(email);

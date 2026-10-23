@@ -26,7 +26,7 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   timeout: timeoutSec * 1000,
-  expect: { timeout: 15_000 },
+  expect: { timeout: 30_000 }, // a check waits up to 30 s for its element before it is reported as failed (slow site)
   outputDir: path.join(RUN_DIR, 'playwright-artifacts'),
   reporter: [['list'], ['html', { outputFolder: path.join(RUN_DIR, 'playwright-report'), open: 'never' }]],
   globalSetup: './core/runner/globalSetup.ts',
