@@ -92,15 +92,9 @@ export const qaSteps: Record<string, CaseHandler<any>> = {
   "WEBHOOK-02": skipWith("needs a push or delivery from the provider"),
   "WEBHOOK-03": skipWith("needs a push or delivery from the provider"),
   "CONFENG-09": skipWith("needs the Confidence Engine page of a finished run (the gates list), which this module does not have"),
-  'SUPPORT-21': async ({ page, input, check }) => {
-    await open(page, input, '/docs/introduction');
-    await expect(page.locator('article').first()).toBeVisible({ timeout: 20_000 });
-    await check('"Was this helpful?" with Yes / No is shown on the guide page', async () => {
-      const t = norm(await bodyText(page));
-      expect(t).toMatch(/was this helpful/i);
-      await expect(page.getByRole('button', { name: /^\s*yes\s*$/i }).first()).toBeVisible();
-      await expect(page.getByRole('button', { name: /^\s*no\s*$/i }).first()).toBeVisible();
-    });
+  // SUPPORT-21 was removed per requirements (missing User Guide feedback buttons)
+  'SUPPORT-21': async (ctx) => {
+    ctx.skip('SUPPORT-21 was removed from the active test suite (missing User Guide feedback buttons).');
   },
   'SUPPORT-22': async ({ page, input, check }) => {
     await open(page, input, '/docs/introduction');
