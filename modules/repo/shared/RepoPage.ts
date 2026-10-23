@@ -127,6 +127,10 @@ export class RepoPage {
     let last = '';
     for (let n = 1; n <= attempts; n++) {
       try {
+        if (await this.app.signOutButton.isVisible().catch(() => false)) {
+          await this.openHome();
+          return;
+        }
         await this.app.login(email, password);
         await this.openHome();
         return;
@@ -141,7 +145,9 @@ export class RepoPage {
   }
 
   async openHome(): Promise<void> {
-    await this.page.goto(`${this.baseUrl}${HOME_PATH}`);
+    if (!this.page.url().includes(HOME_PATH)) {
+      await this.page.goto(`${this.baseUrl}${HOME_PATH}`);
+    }
     await expect(this.changeRepo).toBeVisible({ timeout: 45_000 });
   }
 

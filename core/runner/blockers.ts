@@ -21,3 +21,22 @@ export function getBlocker(key: string): { caseId: string; reason: string } | un
     return undefined;
   }
 }
+
+export function clearBlocker(key: string): void {
+  try {
+    const f = file(key);
+    if (fs.existsSync(f)) fs.unlinkSync(f);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function clearAllBlockers(): void {
+  try {
+    if (fs.existsSync(dir)) fs.rmSync(dir, { recursive: true, force: true });
+  } catch {
+    /* ignore */
+  }
+}
+
+

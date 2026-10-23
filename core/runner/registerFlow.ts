@@ -1,7 +1,7 @@
 import { expect, Page, test as base } from '@playwright/test';
 import { loadCases, loadInput } from '../excel/readInput';
 import { InputConfig, TestCaseRow } from '../types';
-import { getBlocker, setBlocker } from './blockers';
+import { clearAllBlockers, getBlocker, setBlocker } from './blockers';
 import { BlockingFailure } from './checks';
 import { refreshResults } from '../reporting/resultsWorkbook';
 import { CaseHandler, executeCase } from './registerCases';
@@ -54,6 +54,10 @@ const session: { reached: number; failed: string[]; tally: Record<string, number
 const test = base.extend<object, { journeyPage: Page }>({
   journeyPage: [
     async ({ browser }, use) => {
+      clearAllBlockers();
+      session.reached = -1;
+      session.failed = [];
+      session.tally = {};
       const input = loadInput();
       const context = await browser.newContext({ viewport: input.headless ? { width: 1920, height: 1080 } : null });
       const page = await context.newPage();

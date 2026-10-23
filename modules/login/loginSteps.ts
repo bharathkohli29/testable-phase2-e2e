@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import { AppShell } from '../../core/pages/AppShell';
-import { setBlocker } from '../../core/runner/blockers';
+import { clearBlocker, setBlocker } from '../../core/runner/blockers';
 import { BlockingFailure } from '../../core/runner/checks';
 import { CaseHandler } from '../../core/runner/registerCases';
 import { ANY_AUTH_URL, LOGIN_URL, NormalLoginPage } from './normal/normalLogin.page';
@@ -43,6 +43,7 @@ const signIn: CaseHandler<RepoPage> = async (ctx) => {
   }
   if (last) throw new BlockingFailure('login', `Authenticate did not sign in: ${last}. Nothing after this can run.`);
   landingUrl = page.url();
+  clearBlocker('login');
   note(`Landed on ${new URL(page.url()).pathname}`);
   await check('Browser leaves /auth/login for an application page', () => expect(page).not.toHaveURL(LOGIN_URL));
   await check('Signed-in app is shown (Sign out button visible)', () => app.expectAuthenticated());
