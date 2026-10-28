@@ -10,7 +10,6 @@ Everything here is ADDITIVE. `npm test` (the 329-case journey) runs exactly as b
 | Data sets (same steps, many values) | sheet `Datasets`, `dataset=<name>` in Test Data | same |
 | Locator check against the site's code | `scripts/checkLocators.ts` | `npm run locators:check` |
 | Input sheet check, wait times from the sheet, password from environment | `core/excel/validateInput.ts`, `core/settings.ts` | automatic at start of `npm test` |
-| Offline self test | `selftest/selftest.ts` | `npm run selftest` |
 
 ## Writing a keyword case
 1. Add a row on sheet `Keywords` (TC ID, name, Run = Y).
@@ -23,8 +22,19 @@ Keywords: Open, SignIn, Click, Fill, Press, Hover, ScrollTo, Wait, WaitVisible, 
 - `Click` refuses objects marked `danger` and anything like Cancel execution, Run Analysis, Submit ticket, Create account, Delete.
 - Steps are checked before the case runs; one list of every mistake is shown.
 
-## Password
-Set the environment variable `QA_PASSWORD` (PowerShell: `setx QA_PASSWORD "..."`, then open a new window). It overrides the Input sheet, so the sheet can stay blank.
+## Credentials: in `.env`, not in the Input workbook
+E-mail, password and AWS keys are read from the file `.env` in the project folder (never committed; `.env.example` lists the names).
+1. Copy `.env.example` to `.env` (PowerShell: `copy .env.example .env`) and fill in `QA_EMAIL`, `QA_PASSWORD` and the AWS keys. The names `TESTABLE_EMAIL`, `TESTABLE_PASSWORD`, `TESTABLE_EMAIL_DEV`, `TESTABLE_PASSWORD_DEV` are accepted too, so the `.env` of the other project can be reused.
+2. Clear the same cells on the Input sheet. A value in `.env` always wins; a credential still typed in the sheet is used only if `.env` has none, and the run prints a warning naming it (never its value).
+3. A real environment variable of the same name also works and is not overwritten by `.env`.
+
+### Automatic encryption
+Type the real values into `.env` in plain text and save. They are encrypted by the script and shown as `dpapi:...` (Windows: bound to your Windows login, cannot be read on another PC or by another user) or `enc1:...` (other systems: key file outside the project). This happens at the start of every run, or the moment you save if `npm run secrets:watch` is running. During a run the values are decrypted in memory only.
+- Safe: each value is decrypted again and compared before the file is changed; if that fails the file is left untouched. Comments and other lines stay.
+- `npm run secrets:encrypt` encrypts now; `npm run secrets:check` shows which names can be read on this PC (names only).
+- To change a value: type the new plain value over the encrypted line and save.
+- If the file comes from another PC the run says which names cannot be read; type them again.
+- E-mails and passwords are also removed from the results: passwords become `********`, e-mails become `b***@domain` (results workbook and case texts).
 
 ## Locator check
 ```

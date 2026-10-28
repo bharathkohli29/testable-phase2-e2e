@@ -20,7 +20,8 @@ export default async function globalSetup(): Promise<void> {
   let input;
   try {
     input = loadInput();
-  } catch {
+  } catch (e) {
+    if (/^\.env/.test((e as Error).message)) console.log(`\n${(e as Error).message}\n`); // a protected value that cannot be read here
     return; // missing / unreadable workbook: the spec files report that with their own clear message
   }
   const errors = reportInputProblems(validateInput(input));

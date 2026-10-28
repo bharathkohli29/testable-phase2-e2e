@@ -7,3 +7,8 @@ input/*.xlsx
 *.xlsx.tmp
 sync*.log
 .state/
+
+# credentials live in .env - never commit it
+.env
+.env.*
+!.env.example

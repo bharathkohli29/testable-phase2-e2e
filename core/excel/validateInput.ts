@@ -21,8 +21,9 @@ export function validateInput(input: InputConfig): InputProblem[] {
 
   if (!/^https?:\/\/[^\s/]+/i.test(input.baseUrl)) err(`${input.env}_BASE_URL must start with http:// or https:// (it is "${input.baseUrl}").`);
 
-  if (!input.email) warn(`${input.env}_EMAIL is blank: the Login module cannot sign in, so every case that needs a signed-in browser is skipped.`);
-  if (!input.password) warn(`${input.env}_PASSWORD is blank on the Input sheet and the environment variable ${input.env}_PASSWORD is not set.`);
+  if (input.sheetCredentials?.length) warn(`Credentials are filled in on the Input sheet (${input.sheetCredentials.join(', ')}). Put them in the .env file instead and clear the cells (see .env.example); a value in .env wins over the sheet.`);
+  if (!input.email) warn(`${input.env}_EMAIL is not set (put it in the .env file): the Login module cannot sign in, so every case that needs a signed-in browser is skipped.`);
+  if (!input.password) warn(`${input.env}_PASSWORD is not set: put ${input.env}_PASSWORD=... in the .env file.`);
 
   const repo = get('REPO').trim();
   if (repo && !/^[\w.-]+(\/[\w.-]+)?$/.test(repo)) err(`REPO "${repo}" is not written as owner/name (for example Nandhini-Testable/Python_Corpus_Tool_Triggering).`);

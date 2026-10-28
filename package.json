@@ -12,9 +12,11 @@
     "sync": "ts-node scripts/syncWorkbook.ts",
     "test:branches": "ts-node scripts/runBranches.ts",
     "test:keywords": "playwright test modules/keywords",
+    "secrets:encrypt": "ts-node scripts/secrets.ts encrypt",
+    "secrets:watch": "ts-node scripts/secrets.ts watch",
+    "secrets:check": "ts-node scripts/secrets.ts check",
     "objects:update": "ts-node scripts/updateObjects.ts",
-    "locators:check": "ts-node scripts/checkLocators.ts",
-    "selftest": "ts-node selftest/selftest.ts"
+    "locators:check": "ts-node scripts/checkLocators.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.47.0",

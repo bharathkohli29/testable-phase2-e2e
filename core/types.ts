@@ -13,6 +13,8 @@ export interface InputConfig {
   /** Also write Actual Result / Result / screenshot into the input workbook itself (default Y). */
   writeResultsToInput: boolean;
   raw: Record<string, string>;
+  /** Names of credentials that are filled in on the Input sheet (they belong in .env). */
+  sheetCredentials?: string[];
   /** Looks up KEY, then <ENV>_KEY (e.g. get('EMAIL') -> QA_EMAIL when ENV=QA). */
   get(name: string): string;
   /** Replaces {{KEY}} tokens with values from the Input sheet. */

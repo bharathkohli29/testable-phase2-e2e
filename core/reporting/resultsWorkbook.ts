@@ -2,6 +2,7 @@ import * as ExcelJS from 'exceljs';
 import * as fs from 'fs';
 import * as path from 'path';
 import { INPUT_FILE, RECORDS_DIR, RESULTS_XLSX, RUN_DIR, RUN_ID } from '../paths';
+import { maskEmail } from '../secrets';
 import { CaseRecord } from '../types';
 import { actualRichText, beautifyCaseSheet, beautifyInputSheet, styleSummary } from './styles';
 
@@ -35,6 +36,7 @@ function maskSecrets(ws: ExcelJS.Worksheet): void {
     const k = String(row.getCell(1).value ?? '');
     const v = row.getCell(2);
     if (SECRET_KEY.test(k) && v.value) v.value = '********';
+    else if (/EMAIL/i.test(k) && v.value) v.value = maskEmail(String(v.value));
   });
 }
 

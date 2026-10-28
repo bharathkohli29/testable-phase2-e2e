@@ -4,6 +4,7 @@ import * as path from 'path';
 import { loadCases, loadInput, parseTestData } from '../excel/readInput';
 import { EVIDENCE_DIR, RECORDS_DIR, RUN_DIR } from '../paths';
 import { CaseRecord, InputConfig, Result, TestCaseRow } from '../types';
+import { scrub } from '../secrets';
 import { refreshResults } from '../reporting/resultsWorkbook';
 import { getBlocker, setBlocker } from './blockers';
 import { BlockingFailure, Checks, cleanError, explain, SkipCase, type Mark } from './checks';
@@ -58,7 +59,7 @@ const safe = (s: string) => s.replace(/[^A-Za-z0-9_.-]+/g, '_');
 
 function writeRecord(rec: CaseRecord): void {
   fs.mkdirSync(RECORDS_DIR, { recursive: true });
-  fs.writeFileSync(path.join(RECORDS_DIR, `${safe(rec.sheet)}__${safe(rec.id)}.json`), JSON.stringify(rec, null, 2));
+  fs.writeFileSync(path.join(RECORDS_DIR, `${safe(rec.sheet)}__${safe(rec.id)}.json`), JSON.stringify({ ...rec, actual: scrub(rec.actual) }, null, 2)); // real e-mails / passwords never reach the reports
 }
 
 async function takeEvidence(page: Page, id: string): Promise<string> {

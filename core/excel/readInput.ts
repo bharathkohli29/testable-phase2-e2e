@@ -1,13 +1,13 @@
 import * as XLSX from 'xlsx';
 import * as fs from 'fs';
 import { INPUT_FILE } from '../paths';
+import { CREDENTIALS, credentialFromEnv, loadDotEnv } from '../env';
+import { registerSecretValues } from '../secrets';
 import { EnvName, InputConfig, TestCaseRow } from '../types';
 
 const norm = (v: unknown): string => String(v ?? '').trim();
 /** Keys that hold secrets (also masked in the results workbook). */
 export const SECRET_KEY = /(PASSWORD|SECRET|TOKEN|ACCESS_KEY|API_KEY)/i;
-/** Secret keys that are read from the environment even when the Input sheet has no row for them. */
-const SECRET_KEYS_FROM_ENV = ['QA_PASSWORD', 'DEV_PASSWORD'];
 const key = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]/g, '');
 
 function openWorkbook(): XLSX.WorkBook {
@@ -37,13 +37,21 @@ export function loadInput(): InputConfig {
   if (process.env.REPO_OVERRIDE) raw.REPO = process.env.REPO_OVERRIDE;
   if (process.env.WRITE_RESULTS_TO_INPUT_OVERRIDE) raw.WRITE_RESULTS_TO_INPUT = process.env.WRITE_RESULTS_TO_INPUT_OVERRIDE;
 
-  // Secrets can live in environment variables instead of the sheet: an environment variable with the SAME NAME as the key
-  // (e.g. QA_PASSWORD) wins over the sheet value, so the password never has to be typed into the workbook.
-  for (const k of Object.keys(raw)) {
-    if (SECRET_KEY.test(k) && process.env[k]) raw[k] = String(process.env[k]).trim();
+  // Credentials (e-mail, password, AWS keys) come from the file .env (or real environment variables) - see core/env.ts.
+  // A value there always wins. A credential that is still typed into the Input sheet is used only when .env has none, and is reported
+  // by the Input sheet check so it can be moved.
+  loadDotEnv();
+  const sheetCredentials: string[] = [];
+  for (const k of Object.keys(CREDENTIALS)) {
+    const fromEnv = credentialFromEnv(k);
+    const typedInSheet = !!raw[k] && /(EMAIL|PASSWORD|SECRET|TOKEN|ACCESS_KEY)/.test(k);
+    if (typedInSheet) sheetCredentials.push(k);
+    if (fromEnv !== undefined) raw[k] = fromEnv;
   }
-  for (const k of SECRET_KEYS_FROM_ENV) {
-    if (raw[k] === undefined && process.env[k]) raw[k] = String(process.env[k]).trim();
+  registerSecretValues(Object.keys(CREDENTIALS).filter((k) => /(EMAIL|PASSWORD|SECRET|TOKEN|ACCESS_KEY)/.test(k)).map((k) => raw[k] ?? ''));
+  // any other secret-looking key of the sheet can also be given by a same-named environment variable
+  for (const k of Object.keys(raw)) {
+    if (SECRET_KEY.test(k) && process.env[k] && !(k in CREDENTIALS)) raw[k] = String(process.env[k]).trim();
   }
 
   const envName = (raw.ENV || 'QA').toUpperCase();
@@ -69,6 +77,7 @@ export function loadInput(): InputConfig {
     timeoutSec: Number(raw.TIMEOUT_SEC || 120) || 120,
     writeResultsToInput: !/^(n|no|false|0)$/i.test(raw.WRITE_RESULTS_TO_INPUT || 'Y'),
     raw,
+    sheetCredentials,
     get,
     resolve,
   };

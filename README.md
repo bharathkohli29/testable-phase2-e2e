@@ -88,4 +88,4 @@ First-time users (sign-up → payment → connect SCM) are a separate flow, not 
 * The workbook holds real credentials: it is git-ignored – don't share it.
 
 ## Keyword layer (branch keyword-driven)
-See `docs/KEYWORD_LAYER.md`. Quick checks: `npm run typecheck`, `npm run selftest`, `npm run sync`, `npm run locators:check`, `npm run test:keywords`.
+See `docs/KEYWORD_LAYER.md`. Quick checks: `npm run typecheck`, `npm run sync`, `npm run locators:check`, `npm run test:keywords`.

@@ -16,7 +16,6 @@
     "core",
     "modules",
     "scripts",
-    "selftest",
     "playwright.config.ts"
   ]
 }
