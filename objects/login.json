@@ -1,0 +1,28 @@
+{
+  "_comment": "Login module. Every entry is the locator the existing cases already used, moved here. One entry per line (the automatic update edits the line).",
+
+  "login.passwordToggle": { "role": "button", "name": ["Show password", "Hide password"], "match": "contains", "pick": "all", "note": "The eye button in the password field." },
+  "login.forgotPasswordLink": { "role": "link", "name": "Forgot password", "match": "contains" },
+  "login.registerLink": { "role": "link", "name": "Register" },
+  "login.anyHeading": { "role": "heading" },
+
+  "login.forgot.heading": { "role": "heading", "name": "Forgot password", "match": "contains" },
+  "login.forgot.intro": { "text": "Enter your work email", "match": "contains" },
+  "login.forgot.emailLabel": { "text": "Email Address" },
+  "login.forgot.emailBox": { "placeholder": "you@company.com", "match": "contains" },
+  "login.forgot.continue": { "role": "button", "name": "Continue", "danger": "sends a password reset mail" },
+  "login.forgot.signInLink": { "role": "link", "name": "Sign in" },
+  "login.forgot.rememberText": { "text": "Remember your password", "match": "contains" },
+
+  "login.verify.failedHeading": { "text": "Verification failed", "match": "contains" },
+  "login.verify.invalidText": { "text": "Verification link is invalid or has expired", "match": "contains" },
+  "login.verify.resendIntro": { "text": "enter your email and we.ll send a fresh verification link", "match": "regex", "note": "The apostrophe may be ' or a curly one, so this one is a regular expression (never edited automatically)." },
+  "login.verify.resendButton": { "text": "Resend verification email", "match": "contains", "danger": "sends a verification mail" },
+  "login.verify.goToSignInText": { "text": "Go to Sign In", "match": "contains" },
+  "login.verify.goToSignInLink": { "role": "link", "name": "Go to Sign In", "match": "contains", "pick": "all" },
+  "login.verify.goToSignInButton": { "role": "button", "name": "Go to Sign In", "match": "contains", "pick": "all" },
+
+  "login.signOutDialog": { "role": "alertdialog", "note": "The confirmation after pressing Sign out." },
+  "login.signOutDialog.confirm": { "role": "button", "name": "Sign out", "within": "login.signOutDialog", "pick": "all" },
+  "login.signOutDialog.cancel": { "role": "button", "name": ["Cancel", "Stay", "No"], "match": "contains", "within": "login.signOutDialog" }
+}

@@ -1,0 +1,14 @@
+{
+  "_comment": "Headings and other page markers used to prove that a page opened.",
+
+  "dashboard.title": { "role": "heading", "name": "runs dashboard", "match": "contains" },
+  "account.title": { "role": "heading", "name": "Account" },
+  "billing.title": { "role": "heading", "name": "Billing" },
+
+  "chat.messageBox": { "placeholder": "Ask anything", "match": "contains", "note": "Execution Assistant message box" },
+
+  "dangerous.cancelExecution": { "role": "button", "name": "Cancel execution", "danger": "cancels a running analysis" },
+  "dangerous.executeRun": { "role": "button", "name": "Execute run", "danger": "starts a real analysis and uses one execution" },
+  "dangerous.runAnalysis": { "role": "button", "name": "Run Analysis", "danger": "starts a real analysis" },
+  "dangerous.submitTicket": { "role": "button", "name": "Submit ticket", "danger": "sends a real support ticket" }
+}

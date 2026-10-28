@@ -1,0 +1,11 @@
+{
+  "_comment": "Page addresses by name. Taken from the site's app folder (frontend/web-console/src/app).",
+  "dashboard": "/dashboard",
+  "confidenceEngine": "/confidence-engine",
+  "executionAssistant": "/execution-assistant",
+  "account": "/account",
+  "billing": "/billing",
+  "docs": "/docs",
+  "scmIntegrations": "/scm-integrations",
+  "login": "/auth/login"
+}

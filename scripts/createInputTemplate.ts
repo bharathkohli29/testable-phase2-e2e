@@ -9,6 +9,7 @@ import * as path from 'path';
 import { beautifyCaseSheet, beautifyInputSheet } from '../core/reporting/styles';
 import { INPUT_ROWS } from './data/inputRows';
 import { SHEETS } from './data/sheets';
+import { ensureKeywordSheets } from './keywordSheets';
 
 const OUT = path.resolve(__dirname, '..', 'input', 'testable-input.xlsx');
 if (fs.existsSync(OUT) && !process.argv.includes('--force')) {
@@ -77,6 +78,7 @@ for (const sheet of SHEETS) {
 
 beautifyInputSheet(inp);
 for (const ws of caseSheets) beautifyCaseSheet(ws);
+ensureKeywordSheets(wb);
 
 fs.mkdirSync(path.dirname(OUT), { recursive: true });
 wb.xlsx.writeFile(OUT).then(() => console.log(`Created ${OUT}\nFill the yellow cells on the Input sheet (email / password / AWS keys), then run: npm test`));

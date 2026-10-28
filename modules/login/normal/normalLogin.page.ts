@@ -1,4 +1,5 @@
 import { Locator, Page } from '@playwright/test';
+import { obj } from '../../../core/keywords/obj';
 import { loose } from '../shared/text';
 
 export const LOGIN_PATH = '/auth/login';
@@ -30,10 +31,10 @@ export class NormalLoginPage {
     this.heading = page.getByRole('heading', { level: 1 }).first();
     this.email = page.locator('#emailOrUsername');
     this.password = page.locator('#password');
-    this.passwordToggle = page.getByRole('button', { name: /(show|hide)\s*password/i });
+    this.passwordToggle = obj(page, 'login.passwordToggle');
     this.authenticate = page.locator('button[type="submit"]');
-    this.forgotPasswordLink = page.getByRole('link', { name: /forgot\s*password/i }).first();
-    this.registerLink = page.getByRole('link', { name: /^\s*register\s*$/i }).first();
+    this.forgotPasswordLink = obj(page, 'login.forgotPasswordLink');
+    this.registerLink = obj(page, 'login.registerLink');
     this.fieldErrors = page.locator('p[role="alert"]:not([id^="__next-route-announcer"])').filter({ hasText: /\S/ }); // not the (invisible) Next.js route announcer, no empty ones
     this.formError = page.locator('div[role="alert"]');
   }

@@ -4,6 +4,10 @@ import { INPUT_FILE } from '../paths';
 import { EnvName, InputConfig, TestCaseRow } from '../types';
 
 const norm = (v: unknown): string => String(v ?? '').trim();
+/** Keys that hold secrets (also masked in the results workbook). */
+export const SECRET_KEY = /(PASSWORD|SECRET|TOKEN|ACCESS_KEY|API_KEY)/i;
+/** Secret keys that are read from the environment even when the Input sheet has no row for them. */
+const SECRET_KEYS_FROM_ENV = ['QA_PASSWORD', 'DEV_PASSWORD'];
 const key = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]/g, '');
 
 function openWorkbook(): XLSX.WorkBook {
@@ -32,6 +36,15 @@ export function loadInput(): InputConfig {
   if (process.env.BRANCHES_OVERRIDE) raw.BRANCHES = process.env.BRANCHES_OVERRIDE;
   if (process.env.REPO_OVERRIDE) raw.REPO = process.env.REPO_OVERRIDE;
   if (process.env.WRITE_RESULTS_TO_INPUT_OVERRIDE) raw.WRITE_RESULTS_TO_INPUT = process.env.WRITE_RESULTS_TO_INPUT_OVERRIDE;
+
+  // Secrets can live in environment variables instead of the sheet: an environment variable with the SAME NAME as the key
+  // (e.g. QA_PASSWORD) wins over the sheet value, so the password never has to be typed into the workbook.
+  for (const k of Object.keys(raw)) {
+    if (SECRET_KEY.test(k) && process.env[k]) raw[k] = String(process.env[k]).trim();
+  }
+  for (const k of SECRET_KEYS_FROM_ENV) {
+    if (raw[k] === undefined && process.env[k]) raw[k] = String(process.env[k]).trim();
+  }
 
   const envName = (raw.ENV || 'QA').toUpperCase();
   if (envName !== 'QA' && envName !== 'DEV') throw new Error(`Input sheet: ENV must be QA or DEV (got "${raw.ENV}")`);
@@ -113,4 +126,29 @@ export function parseTestData(text: string, input: InputConfig): Record<string, 
     data[p.slice(0, eq).trim().toLowerCase()] = input.resolve(p.slice(eq + 1).trim());
   }
   return data;
+}
+
+/** True when the workbook has a sheet with this name (any case / spacing). */
+export function sheetExists(name: string): boolean {
+  return openWorkbook().SheetNames.some((n) => key(n) === key(name));
+}
+
+/**
+ * Reads any sheet as a table: row 1 is the header, every later row becomes an object keyed by the header text in lower case without
+ * spaces ("Test Steps" -> teststeps). Empty rows are dropped. Used by the Keyword Steps and Datasets sheets.
+ */
+export function readTable(name: string): Array<Record<string, string> & { __row: string }> {
+  const rows = sheetRows(openWorkbook(), name);
+  if (rows.length === 0) return [];
+  const header = rows[0].map((h) => key(norm(h)));
+  const out: Array<Record<string, string> & { __row: string }> = [];
+  rows.slice(1).forEach((r, i) => {
+    if (r.every((c) => norm(c) === '')) return;
+    const o: Record<string, string> = { __row: String(i + 2) };
+    header.forEach((h, n) => {
+      if (h) o[h] = norm(r[n]);
+    });
+    out.push(o as Record<string, string> & { __row: string });
+  });
+  return out;
 }

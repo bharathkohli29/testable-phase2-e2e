@@ -10,7 +10,11 @@
     "typecheck": "tsc --noEmit",
     "report": "playwright show-report",
     "sync": "ts-node scripts/syncWorkbook.ts",
-    "test:branches": "ts-node scripts/runBranches.ts"
+    "test:branches": "ts-node scripts/runBranches.ts",
+    "test:keywords": "playwright test modules/keywords",
+    "objects:update": "ts-node scripts/updateObjects.ts",
+    "locators:check": "ts-node scripts/checkLocators.ts",
+    "selftest": "ts-node selftest/selftest.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.47.0",

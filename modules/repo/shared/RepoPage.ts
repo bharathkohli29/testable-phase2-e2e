@@ -1,6 +1,7 @@
 import { expect, Locator, Page } from '@playwright/test';
 import { AppShell } from '../../../core/pages/AppShell';
 import { BlockingFailure } from '../../../core/runner/checks';
+import { waitMs } from '../../../core/settings';
 
 export const HOME_PATH = '/execution-assistant';
 export const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -163,8 +164,8 @@ export class RepoPage {
     const wait = [20, 40, 60];
     for (let attempt = 0; ; attempt++) {
       const outcome = await Promise.race([
-        this.syncedMessage.waitFor({ state: 'visible', timeout: 120_000 }).then(() => 'ready' as const),
-        this.syncFailed.waitFor({ state: 'visible', timeout: 120_000 }).then(() => 'failed' as const),
+        this.syncedMessage.waitFor({ state: 'visible', timeout: waitMs('SYNC_WAIT_SEC', 120) }).then(() => 'ready' as const),
+        this.syncFailed.waitFor({ state: 'visible', timeout: waitMs('SYNC_WAIT_SEC', 120) }).then(() => 'failed' as const),
       ]).catch(() => 'timeout' as const);
       if (outcome === 'ready') return;
       if (attempt >= wait.length) {
@@ -211,7 +212,7 @@ export class RepoPage {
       const row = this.repoRow(repo).first();
       await expect(row).toBeVisible({ timeout: 15_000 });
       await row.click();
-      await expect(this.confirmRepo).toBeVisible({ timeout: 120_000 });
+      await expect(this.confirmRepo).toBeVisible({ timeout: waitMs('CONFIGURE_WAIT_SEC', 120) });
     } catch (e) {
       throw new BlockingFailure('configure', `Could not open the configuration of "${repo}" (is REPO correct?) - ${(e as Error).message.split('\n')[0]}`);
     }
@@ -226,7 +227,7 @@ export class RepoPage {
     try {
       await expect(row).toBeVisible({ timeout: 15_000 });
       await row.click();
-      await expect(this.confirmRepo).toBeVisible({ timeout: 120_000 });
+      await expect(this.confirmRepo).toBeVisible({ timeout: waitMs('CONFIGURE_WAIT_SEC', 120) });
     } catch (e) {
       throw new BlockingFailure('configure', `Could not open the configuration of "${repo}" (is REPO correct?) - ${(e as Error).message.split('\n')[0]}`);
     }
@@ -310,7 +311,7 @@ export class RepoPage {
     return 'timeout';
   }
 
-  async confirmAndWaitForReview(timeoutMs = 240_000): Promise<void> {
+  async confirmAndWaitForReview(timeoutMs = waitMs('REVIEW_WAIT_SEC', 240)): Promise<void> {
     await this.confirmRepo.click();
     const outcome = await this.waitEvery30s('"Review branches" after Confirm', { review: this.reviewBranches, refused: this.cannotChange }, timeoutMs);
     if (outcome === 'review') return;
@@ -349,7 +350,7 @@ export class RepoPage {
    * Clicks "Continue" on Review branches and waits for the Run plan card. When the site cannot build the plan
    * ("Could not build plan" / "Plan unavailable") nothing after it can be checked, so that is a blocking failure.
    */
-  async continueAndWaitForPlan(timeoutMs = 180_000): Promise<void> {
+  async continueAndWaitForPlan(timeoutMs = waitMs('PLAN_WAIT_SEC', 180)): Promise<void> {
     await this.continueBtn.click();
     const plan = this.page.getByText(/^\s*Run plan\s*$/i).last();
     const failed = this.page.getByText(/Could not build plan|Plan unavailable|couldn't build the White Box run plan/i).last();

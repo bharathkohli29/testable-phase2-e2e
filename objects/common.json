@@ -1,0 +1,16 @@
+{
+  "_comment": "Elements that exist on every signed-in page. Each entry copies a locator that the existing cases already use (AppShell, menus, support module).",
+
+  "shell.signOut": { "role": "button", "name": "Sign out", "note": "Sidebar sign-out button (AppShell.signOutButton). The site also has data-testid sidebar-sign-out-icon on its icon." },
+  "shell.supportButton": { "role": "button", "name": "Support", "note": "The round Support button at the bottom right of every page." },
+  "shell.supportMenu": { "role": "menu", "note": "The menu the Support button opens." },
+  "support.menu.userGuide": { "role": "menuitem", "name": "User Guide", "within": "shell.supportMenu" },
+  "support.menu.liveChat": { "role": "menuitem", "name": "Live Chat", "within": "shell.supportMenu", "danger": "opens a live chat with Support" },
+  "support.menu.submitRequest": { "role": "menuitem", "name": "Submit a Request", "within": "shell.supportMenu" },
+
+  "nav.workspace": { "role": "navigation", "name": "workspace", "match": "contains", "note": "Left menu" },
+  "nav.dashboard": { "role": "link", "name": "Dashboard", "within": "nav.workspace" },
+  "nav.confidenceEngine": { "role": "link", "name": "Confidence Engine", "within": "nav.workspace" },
+  "nav.executionAssistant": { "role": "link", "name": "Execution Assistant", "within": "nav.workspace" },
+  "nav.accountAndPlan": { "role": "link", "name": "Account and Plan", "within": "nav.workspace" }
+}

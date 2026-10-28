@@ -15,6 +15,7 @@ import { qaFor } from './qaCases';
 import { ASSISTANT_CASES } from './assistantCases';
 import { CONTEXT_CASES } from './contextCases';
 import { REDIRECT_CASES } from './redirectCases';
+import { KEYWORD_CASES } from './keywordCases';
 
 /** One entry per module sheet in the workbook. Add new modules here. */
 export const SHEETS: Array<{ name: string; cases: CaseDef[] }> = [
@@ -34,6 +35,7 @@ export const SHEETS: Array<{ name: string; cases: CaseDef[] }> = [
   { name: 'Account', cases: [...ACCOUNT_CASES, ...qaFor('Account')] },
   { name: 'Support', cases: [...SUPPORT_CASES, ...qaFor('Support')] },
   { name: 'Redirects', cases: [...REDIRECT_CASES, ...qaFor('Redirects')] },
+  { name: 'Keywords', cases: KEYWORD_CASES },
 ];
 
 /** Sheets that were dropped on purpose: `npm run sync` deletes them from an existing workbook. */

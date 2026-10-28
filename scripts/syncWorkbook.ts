@@ -12,6 +12,7 @@ import { INPUT_FILE } from '../core/paths';
 import { beautifyCaseSheet, beautifyInputSheet } from '../core/reporting/styles';
 import { INPUT_ROWS } from './data/inputRows';
 import { RETIRED_SHEETS, SHEETS } from './data/sheets';
+import { ensureKeywordSheets } from './keywordSheets';
 
 const key = (s: unknown): string => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
 const text = (v: ExcelJS.CellValue): string => {
@@ -109,6 +110,9 @@ async function main(): Promise<void> {
     beautifyCaseSheet(login);
   }
 
+  // ── keyword-driven sheets: "Keyword Steps" and "Datasets" (existing rows are never changed) ──
+  const kw = ensureKeywordSheets(wb);
+
   const tmp = `${INPUT_FILE}.tmp`;
   await wb.xlsx.writeFile(tmp);
   try {
@@ -117,7 +121,7 @@ async function main(): Promise<void> {
     fs.rmSync(tmp, { force: true });
     throw new Error(`Could not replace ${INPUT_FILE} - is it open in Excel? Close it and run again. (${(e as Error).message})`);
   }
-  console.log(`Workbook updated: ${added} test case rows added, ${refreshed} refreshed, ${removed} sheet(s) removed, ${addedKeys} Input keys added. Your values were not changed.`);
+  console.log(`Workbook updated: ${added} test case rows added, ${refreshed} refreshed, ${removed} sheet(s) removed, ${addedKeys} Input keys added, ${kw.stepRows} keyword step rows and ${kw.datasetRows} data set rows added. Your values were not changed.`);
 }
 
 main().catch((e) => {
