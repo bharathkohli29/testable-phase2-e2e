@@ -3,27 +3,29 @@ import { CaseHandler } from '../../core/runner/registerCases';
 import { inputs } from '../flow/helpers';
 import { RepoPage, has } from '../repo/shared/RepoPage';
 import { bodyText, escRe, norm } from '../flow/ui';
+import { obj as locatorOf } from '../../core/keywords/obj';
 
+import { expected as expectedOf } from '../../core/keywords/expected';
 /**
  * The repository context of the Execution Assistant once the Run plan is open: the "Repository ready" bar, the "Details" panel
  * (Source details) and "Repository history". Verified live on QA (15 Oct). Panels are only opened and closed.
  */
 const repoName = (full: string): string => full.trim().replace(/\.git$/i, '').split('/').pop() ?? '';
-const bar = (page: Page) => page.getByText(/^\s*repository ready\s*$/i).first();
-const detailsBtn = (page: Page) => page.getByRole('button', { name: /^\s*details\s*$/i }).first();
-const panel = (page: Page, title: RegExp) => page.getByRole('dialog').filter({ hasText: title }).first();
+const bar = (page: Page) => locatorOf(page, 'context.text.repository-ready').first();
+const detailsBtn = (page: Page) => locatorOf(page, 'context.button.details').first();
+const panel = (page: Page, title: RegExp) => locatorOf(page, 'context.dialog.item').filter({ hasText: title }).first();
 
 async function closePanel(page: Page, title: RegExp): Promise<void> {
   const p = panel(page, title);
   if (!(await p.isVisible().catch(() => false))) return;
   await page.keyboard.press('Escape').catch(() => undefined);
-  if (await p.isVisible().catch(() => false)) await p.locator('button').first().click().catch(() => undefined);
+  if (await p.isVisible().catch(() => false)) await locatorOf(p, 'context.css.button').first().click().catch(() => undefined);
   await p.waitFor({ state: 'hidden', timeout: 5_000 }).catch(() => undefined);
 }
 
 /** "Repository ready · <repo> · <branch> · <sha> · <availability>" as read from the bar. */
 async function readBar(page: Page): Promise<{ text: string; repo: string; branch: string; sha: string }> {
-  const t = norm(await bar(page).locator('xpath=ancestor::*[contains(., "·")][1]').innerText().catch(() => ''));
+  const t = norm(await locatorOf(bar(page), 'context.css.xpath-ancestor-contains-1').innerText().catch(() => ''));
   const parts = t.split('·').map((x) => x.trim());
   return { text: t, repo: parts[1] ?? '', branch: parts[2] ?? '', sha: parts[3] ?? '' };
 }
@@ -65,7 +67,7 @@ export const contextSteps: Record<string, CaseHandler<RepoPage>> = {
     await check('Availability says the repository and the branch are "Available"', () => expect(val('Availability')).toMatch(/repository:\s*available.*branch:\s*available/i));
     await check('"Elapsed" shows a time (for example 1s or 00:00)', () => expect(val('Elapsed')).toMatch(/\d{1,2}:\d{2}|\d+\s*(s|sec|m|min|h)\b/i)); // the site writes it as "1s" (or 00:00)
     await check('"Status" is "Repository ready"', () => expect(val('Status')).toMatch(/repository ready/i));
-    await check('"Technical details" is offered', () => expect(p.getByText(/technical details/i).first()).toBeVisible());
+    await check('"Technical details" is offered', () => expect(locatorOf(p, 'context.text.technical-details').first()).toBeVisible());
     await snap('Source details panel', p);
     await closePanel(page, /source details/i);
     await check('The panel can be closed', () => expect(p).toBeHidden());
@@ -76,13 +78,13 @@ export const contextSteps: Record<string, CaseHandler<RepoPage>> = {
     const { repo, branch } = inputs(ctx, { repo: true, branches: 1 });
     const b = await readBar(page);
     const activeBranch = b.branch || branch;
-    await page.getByRole('button', { name: /repository history/i }).first().click();
+    await locatorOf(page, 'context.button.repository-history').first().click();
     const p = panel(page, /repository history/i);
     await check('"Repository history" opens a panel', () => expect(p).toBeVisible());
     await check('It says "Configuration changes for this tenant. Historical execution evidence is not moved."', () =>
-      expect(p).toContainText(/configuration changes for this tenant\.?\s*historical execution evidence is not moved/i));
+      expect(p).toContainText(expectedOf('context.text.configuration-changes-for-this-tenant')));
     // Wait for the asynchronous history entries to load into the panel
-    await p.locator('text=/\\d{1,2}\\/\\d{1,2}\\/\\d{4}/, text=/current/i, text=/changed by/i').first().waitFor({ state: 'visible', timeout: 15_000 }).catch(() => undefined);
+    await locatorOf(p, 'context.css.text-1-2-1-2-4-text-current-i-text-c').first().waitFor({ state: 'visible', timeout: 15_000 }).catch(() => undefined);
     const t = norm(await p.innerText().catch(() => ''));
     note(`History panel: ${t.slice(0, 300)}`);
     await check(`The newest entry is the chosen repository "${repo}" / branch "${activeBranch}"`, () => {
@@ -94,7 +96,7 @@ export const contextSteps: Record<string, CaseHandler<RepoPage>> = {
         expect(entry).toMatch(new RegExp(escRe(activeBranch), 'i'));
       }
     });
-    await check('That entry is labelled "Current"', () => expect(p.getByText(/^\s*current\s*$/i).first()).toBeVisible());
+    await check('That entry is labelled "Current"', () => expect(locatorOf(p, 'context.text.current').first()).toBeVisible());
     await check('The entry says "From ..." and "Changed by <email>"', () => {
       expect(t).toMatch(/\bfrom\b/i);
       expect(t).toMatch(/changed by\s+[^\s@]+@[^\s@]+/i);

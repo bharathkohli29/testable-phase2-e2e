@@ -1,0 +1,4 @@
+{
+  "confidence.text.completed": {"regex":"completed","flags":"i"},
+  "confidence.attr.true": {"text":"true"}
+}

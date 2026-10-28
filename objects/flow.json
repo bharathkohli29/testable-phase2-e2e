@@ -1,0 +1,10 @@
+{
+  "_comment": "Module flow: locators moved out of the code (one entry per line). Keys are made from the role and text; rename them freely.",
+
+  "flow.css.body": { "css": "body", "pick": "all" },
+  "flow.text.pr-confidence-analysis-confidence-gr": { "text": "PR Confidence Analysis|Confidence Graph|Confidence Object", "match": "regex", "pick": "all" },
+  "flow.button.support": { "role": "button", "name": "support", "match": "exact", "pick": "all" },
+  "flow.menu.item": { "role": "menu", "pick": "all" },
+  "flow.dialog.item": { "role": "dialog", "pick": "all" },
+  "flow.button.cancel": { "role": "button", "name": "cancel", "match": "exact", "pick": "all" }
+}

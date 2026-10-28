@@ -8,6 +8,7 @@ import { inputs } from '../flow/helpers';
 import { readDashboardRow, readEngine, readGraph, readObject, same, until } from '../flow/crossScreen';
 import { RepoPage } from '../repo/shared/RepoPage';
 import { pushDummyCommit } from './dummyCommit';
+import { obj as locatorOf } from '../../core/keywords/obj';
 
 /**
  * The Latest commit module: add a "Dummy PR" line to the README of the branch under test, push it, and the platform has a newer tip.
@@ -27,11 +28,11 @@ const st = {
 
 const runIdOf = (page: Page): string => new URL(page.url()).searchParams.get('runId') ?? '';
 const num = (s: unknown): number => Number(String(s ?? '').replace(/[^\d.\-]/g, ''));
-const bodyText = async (page: Page): Promise<string> => (await page.locator('body').innerText().catch(() => '')) || '';
+const bodyText = async (page: Page): Promise<string> => (await locatorOf(page, 'latestcommit.css.body').innerText().catch(() => '')) || '';
 const meter = async (page: Page): Promise<number> => num((await bodyText(page)).match(/Executions:\s*(\d+)\s*\/\s*\d+/i)?.[1]);
 /** The Confidence Score shown on the page (whitespace-agnostic: "Confidence Score commit 5beda03 85 /100 Pass"). */
 const shownScore = async (page: Page): Promise<string> => ((await bodyText(page)).replace(/\s+/g, ' ').match(/Confidence Score\s*(?:commit\s*\S+\s*)?(\d{1,3})\s*\/\s*100/i)?.[1]) ?? '';
-const refreshBtn = (page: Page) => page.getByRole('button', { name: /^\s*refresh\s*$/i }).first();
+const refreshBtn = (page: Page) => locatorOf(page, 'latestcommit.button.refresh').first();
 const pageTitle = (page: Page) => labelText(page, 'PR Confidence Analysis').first();
 
 async function summary(page: Page, runId: string): Promise<Record<string, any>> {
@@ -47,7 +48,7 @@ async function fullRepo(page: Page, repo: string): Promise<string> {
   return m ? `${m[1]}/${repo}` : repo;
 }
 
-const analyseButton = (page: Page) => page.getByRole('button', { name: /analy[sz]e latest commit/i }).last();
+const analyseButton = (page: Page) => locatorOf(page, 'latestcommit.button.analy-sz-e-latest-commit').last();
 
 export const latestCommitSteps: Record<string, CaseHandler<RepoPage>> = {
   'COM-001': async (ctx) => {
@@ -67,7 +68,7 @@ export const latestCommitSteps: Record<string, CaseHandler<RepoPage>> = {
       });
       st.wired = true;
     }
-    await snap('Confidence Engine page of the analyzed commit, before the new commit is pushed', page.getByText(/already analy[sz]ed/i).last());
+    await snap('Confidence Engine page of the analyzed commit, before the new commit is pushed', locatorOf(page, 'latestcommit.text.already-analy-sz-ed').last());
     note(`Before: the chat says the commit "${st.oldSha || '(not shown)'}" is already analyzed; run ${st.oldRun}; executions used ${Number.isNaN(st.meterBefore) ? '?' : st.meterBefore}.`);
     const full = await fullRepo(page, repo);
     let made: Awaited<ReturnType<typeof pushDummyCommit>>;
@@ -99,7 +100,7 @@ export const latestCommitSteps: Record<string, CaseHandler<RepoPage>> = {
       if (sec > 120 && nudged === 1) { nudged = 2; await page.reload().catch(() => undefined); }
       await page.waitForTimeout(5_000);
     }
-    const card = ((await page.getByText(/already analyzed|newer tip|new commit/i).last().locator('xpath=ancestor::*[.//button[normalize-space()="Analyze latest commit"]][1]').innerText().catch(() => '')) || '').replace(/\s+/g, ' ').trim();
+    const card = ((await locatorOf(locatorOf(page, 'latestcommit.text.already-analyzed-newer-tip-new-commi').last(), 'latestcommit.css.xpath-ancestor-button-normalize-spac').innerText().catch(() => '')) || '').replace(/\s+/g, ' ').trim();
     note(`The "Analyze latest commit" card now says: ${card.slice(0, 200) || '(card not found)'}`);
     await check(`The page shows the new commit id (${short}) after the push (waited ${Math.round((Date.now() - t0) / 1000)} s)`, () =>
       expect(seen, `${short} did not appear on the page within 4 minutes (refreshed once and reloaded once)`).toBe(true));
@@ -122,8 +123,8 @@ export const latestCommitSteps: Record<string, CaseHandler<RepoPage>> = {
     });
     await analyseButton(page).click();
     note('"Analyze latest commit" was clicked. This starts a real run.');
-    const underway = page.getByText(/White\s*Box Analysis is underway/i).last();
-    const failed = page.getByText(/Couldn.t start the run/i).last();
+    const underway = locatorOf(page, 'latestcommit.text.white-box-analysis-is-underway').last();
+    const failed = locatorOf(page, 'latestcommit.text.couldn-t-start-the-run').last();
     const which = await Promise.race([
       underway.waitFor({ state: 'visible', timeout: 120_000 }).then(() => 'underway' as const),
       failed.waitFor({ state: 'visible', timeout: 120_000 }).then(() => 'failed' as const),
@@ -133,7 +134,7 @@ export const latestCommitSteps: Record<string, CaseHandler<RepoPage>> = {
     if (!which) throw new BlockingFailure('newrun', 'Nothing happened within 2 minutes of clicking "Analyze latest commit": no "White Box Analysis is underway" message and no new run.');
     // The new run's page: follow "Open Confidence Engine" when the platform stays in the chat.
     if (runIdOf(page) === st.oldRun) {
-      const open = page.getByRole('button', { name: /open confidence engine/i }).last();
+      const open = locatorOf(page, 'latestcommit.button.open-confidence-engine').last();
       await open.click({ timeout: 30_000 }).catch(() => undefined);
       await page.waitForURL((u) => (u.searchParams.get('runId') ?? st.oldRun) !== st.oldRun, { timeout: 60_000 }).catch(() => undefined);
     }
@@ -143,13 +144,13 @@ export const latestCommitSteps: Record<string, CaseHandler<RepoPage>> = {
     if (!st.newRun || st.newRun === st.oldRun) throw new BlockingFailure('newrun', 'The Confidence Engine page still shows the previous run, so the new run cannot be followed.');
     await check(`The address names the branch "${branch}"`, () => expect((new URL(page.url()).searchParams.get('branch') ?? '').toLowerCase()).toBe(branch.toLowerCase()));
     await check(`The "Branch run" selector shows the new commit (${short}) and the start of the new run id`, async () => {
-      const sel = page.getByRole('combobox', { name: /branch run/i }).first();
+      const sel = locatorOf(page, 'latestcommit.combobox.branch-run').first();
       await expect(sel).toContainText(new RegExp(short, 'i'), { timeout: 30_000 });
       await expect(sel).toContainText(new RegExp(st.newRun.slice(0, 8), 'i'));
     });
-    await check('The page header shows that the run is executing ("Executing…")', () => expect(page.getByText(/executing|running|in progress|underway/i).first()).toBeVisible({ timeout: 45_000 }));
-    await check('"Cancel execution" is offered (it is not clicked)', () => expect(page.getByRole('button', { name: /cancel/i }).first()).toBeVisible({ timeout: 45_000 }));
-    await snap('New run page while it is executing', [page.getByRole('combobox', { name: /branch run/i }).first(), page.getByRole('button', { name: /cancel/i }).first()]);
+    await check('The page header shows that the run is executing ("Executing…")', () => expect(locatorOf(page, 'latestcommit.text.executing-running-in-progress-underw').first()).toBeVisible({ timeout: 45_000 }));
+    await check('"Cancel execution" is offered (it is not clicked)', () => expect(locatorOf(page, 'latestcommit.button.cancel').first()).toBeVisible({ timeout: 45_000 }));
+    await snap('New run page while it is executing', [locatorOf(page, 'latestcommit.combobox.branch-run').first(), locatorOf(page, 'latestcommit.button.cancel').first()]);
   },
 
   'COM-004': async (ctx) => {
@@ -157,7 +158,7 @@ export const latestCommitSteps: Record<string, CaseHandler<RepoPage>> = {
     ctx.requires('newrun');
     const { page, check, note, snap } = ctx;
     if (!st.newRun) ctx.skip('No new run was started in this run.');
-    const toggle = page.getByRole('button', { name: /Execution Status/i }).first();
+    const toggle = locatorOf(page, 'latestcommit.button.execution-status').first();
     await ctx.step('"Execution Status" is shown for the new run', () => expect(toggle).toBeVisible({ timeout: 30_000 }));
     if (!(await labelText(page, 'Queued').first().isVisible().catch(() => false))) await toggle.click().catch(() => undefined);
     const readTimer = async (): Promise<number> => {
@@ -213,7 +214,7 @@ export const latestCommitSteps: Record<string, CaseHandler<RepoPage>> = {
       expect(st.longestStallMin, `the number of finished tasks did not change for ${st.longestStallMin} min`).toBeLessThanOrEqual(5));
     if (!st.finished) throw new BlockingFailure('newrunfinished', `The new run did not finish within ${wait} min - the result checks cannot be made.`);
     await refreshBtn(page).click().catch(() => undefined);
-    await check('The chat says "Run complete"', () => expect(page.getByText(/Run complete/i).last()).toBeVisible({ timeout: 60_000 }));
+    await check('The chat says "Run complete"', () => expect(locatorOf(page, 'latestcommit.text.run-complete').last()).toBeVisible({ timeout: 60_000 }));
     await check('The page shows a final score (not "—") within 3 minutes', async () => {
       await expect.poll(() => shownScore(page), { timeout: 180_000 }).toMatch(/^\d+$/);
     });
@@ -242,14 +243,14 @@ export const latestCommitSteps: Record<string, CaseHandler<RepoPage>> = {
       expect(shown, `API score ${String(s.overall_score)}`).toBe(Math.round(num(s.overall_score)));
     });
     await check('The page header and selector show the new commit', () =>
-      expect(page.getByRole('combobox', { name: /branch run/i }).first()).toContainText(new RegExp(short, 'i')));
+      expect(locatorOf(page, 'latestcommit.combobox.branch-run').first()).toContainText(new RegExp(short, 'i')));
     await check('The chat now says the new commit is already analyzed', async () => {
       await expect.poll(async () => (await bodyText(page)).match(/already analyzed\s*\(([0-9a-f]{7,40})\)/i)?.[1] ?? '', { timeout: 60_000 }).toMatch(new RegExp(`^${short}`, 'i'));
     });
     await check('One more execution was used (the executions meter went up by 1)', async () => {
       // the meter may be refreshed a little after the run ends: read it again for up to a minute (Refresh is clicked once)
       let after = await meter(page);
-      if (after !== st.meterBefore + 1) { await page.getByRole('button', { name: /^refresh/i }).first().click({ timeout: 5_000 }).catch(() => undefined); }
+      if (after !== st.meterBefore + 1) { await locatorOf(page, 'latestcommit.button.refresh-2').first().click({ timeout: 5_000 }).catch(() => undefined); }
       const end = Date.now() + 60_000;
       while (after !== st.meterBefore + 1 && Date.now() < end) { await page.waitForTimeout(3_000); after = await meter(page); }
       expect(after, `meter before ${st.meterBefore}, after ${after}`).toBe(st.meterBefore + 1);
@@ -286,14 +287,14 @@ export const latestCommitSteps: Record<string, CaseHandler<RepoPage>> = {
     await check(`Confidence Engine: the score is the new score (${expected})`, () => same(eng.score, expected, 'Confidence Score'));
 
     let obj: Awaited<ReturnType<typeof readObject>> = {};
-    if (await open('Confidence Object', () => page.locator('a[href*="/confidence-engine"][href*="pillar=object"]').first().click(), /pillar=object/)) {
+    if (await open('Confidence Object', () => locatorOf(page, 'latestcommit.css.a-href-confidence-engine-href-pillar').first().click(), /pillar=object/)) {
       obj = await until(() => readObject(page, repoName), (v) => v.org !== undefined);
     }
     await check(`Confidence Object: the page is for the new run (${id8}), not the previous one`, () => { same((obj.breadcrumbRun ?? urlRun()).toLowerCase(), id8.toLowerCase(), 'run id of the page'); noOld(obj.breadcrumbRun ?? urlRun(), 'Confidence Object'); });
     await check(`Confidence Object: the ORG score is the new score (${expected})`, () => same(obj.org, expected, 'ORG score'));
 
     let gr = { labels: [] as string[] } as Awaited<ReturnType<typeof readGraph>>;
-    if (await open('Confidence Graph', () => page.locator('a[href*="/confidence-engine"][href*="pillar=graph"]').first().click(), /pillar=graph/)) {
+    if (await open('Confidence Graph', () => locatorOf(page, 'latestcommit.css.a-href-confidence-engine-href-pillar-2').first().click(), /pillar=graph/)) {
       gr = await until(() => readGraph(page, id8), (v) => v.org !== undefined && v.historyScore !== undefined);
     }
     await check(`Confidence Graph: the page is for the new run (${id8}), not the previous one`, () => { same((gr.breadcrumbRun ?? urlRun()).toLowerCase(), id8.toLowerCase(), 'run id of the page'); noOld(gr.breadcrumbRun ?? urlRun(), 'Confidence Graph'); });
@@ -303,10 +304,10 @@ export const latestCommitSteps: Record<string, CaseHandler<RepoPage>> = {
 
     let row: Awaited<ReturnType<typeof readDashboardRow>>;
     let first = '';
-    if (await open('Dashboard', () => page.locator('a[href="/dashboard"]').first().click(), /\/dashboard/)) {
-      await page.locator('tbody tr').first().waitFor({ state: 'visible', timeout: 30_000 }).catch(() => undefined);
+    if (await open('Dashboard', () => locatorOf(page, 'latestcommit.css.a-href-dashboard').first().click(), /\/dashboard/)) {
+      await locatorOf(page, 'latestcommit.css.tbody-tr').first().waitFor({ state: 'visible', timeout: 30_000 }).catch(() => undefined);
       row = await until(() => readDashboardRow(page, id8), (v) => v !== undefined, 20_000);
-      first = ((await page.locator('tbody tr').first().locator('td').first().innerText().catch(() => '')) || '').trim();
+      first = ((await locatorOf(locatorOf(page, 'latestcommit.css.tbody-tr').first(), 'latestcommit.css.td').first().innerText().catch(() => '')) || '').trim();
     }
     await check(`Runs Dashboard: the new run (${id8}) is listed`, () => expect(row, 'the new run is not in the table').toBeDefined());
     await check('Runs Dashboard: the new run is the first (newest) row', () => expect(first.toLowerCase(), `first row: ${first}`).toContain(id8.toLowerCase()));

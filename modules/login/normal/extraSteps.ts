@@ -6,6 +6,7 @@ import { RepoPage } from '../../repo/shared/RepoPage';
 import { closeSupport, norm, open, supportButton, supportItem } from '../../flow/ui';
 import { ANY_AUTH_URL, LOGIN_URL, NormalLoginPage } from './normalLogin.page';
 
+import { expected as expectedOf } from '../../../core/keywords/expected';
 /** Extra Login cases from the QA sheets, verified live on QA (15 Oct). Password reset and e-mail verification are only LOOKED AT: no reset mail is requested. */
 export const extraLoginSteps: Record<string, CaseHandler<RepoPage>> = {
   'LOGIN-NRM-022': async ({ page, input, check, snap }) => {
@@ -30,12 +31,12 @@ export const extraLoginSteps: Record<string, CaseHandler<RepoPage>> = {
     await check('The address is /auth/forgot-password', () => expect(new URL(page.url()).pathname.toLowerCase()).toBe('/auth/forgot-password'));
     await check('The heading "Forgot password?" is shown', () => expect(head).toBeVisible());
     await check('"Enter your work email. If an account exists, we\'ll email a verification code — then you\'ll enter it and choose a new password." is shown', () =>
-      expect(obj(page, 'login.forgot.intro')).toContainText(/if an account exists,?\s*we.ll email a verification code.*choose a new password/i));
+      expect(obj(page, 'login.forgot.intro')).toContainText(expectedOf('login.text.if-an-account-exists-we')));
     await check('The field "Email Address" has the placeholder "you@company.com" and accepts an e-mail (type email)', async () => {
       await expect(obj(page, 'login.forgot.emailLabel')).toBeVisible();
       const box = obj(page, 'login.forgot.emailBox');
       await expect(box).toBeVisible();
-      await expect(box).toHaveAttribute('type', 'email');
+      await expect(box).toHaveAttribute('type', expectedOf('login.attr.email'));
     });
     await check('The "Continue" button is shown (it is not pressed: it would send a reset mail)', () => expect(obj(page, 'login.forgot.continue')).toBeVisible());
     await snap('Forgot password page', head);
@@ -47,7 +48,7 @@ export const extraLoginSteps: Record<string, CaseHandler<RepoPage>> = {
     await expect(link).toBeVisible({ timeout: 20_000 });
     await check('"Remember your password?" is shown with a "Sign in" link to /auth/login', async () => {
       await expect(obj(page, 'login.forgot.rememberText')).toBeVisible();
-      await expect(link).toHaveAttribute('href', /\/auth\/login/i);
+      await expect(link).toHaveAttribute('href', expectedOf('login.attr.auth-login'));
     });
     await snap('Sign in link on the forgot-password page', link);
     await check('Clicking "Sign in" opens the login page', async () => {

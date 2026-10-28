@@ -1,5 +1,6 @@
 import { Page } from '@playwright/test';
 import { OAuthLoginPage } from '../shared/OAuthLoginPage';
+import { obj as locatorOf } from '../../../core/keywords/obj';
 
 export class GoogleLoginPage extends OAuthLoginPage {
   constructor(page: Page, baseUrl: string) {
@@ -7,11 +8,11 @@ export class GoogleLoginPage extends OAuthLoginPage {
   }
 
   async completeProviderLogin(email: string, password: string): Promise<void> {
-    const user = this.page.locator('input[type="email"]').first();
+    const user = locatorOf(this.page, 'login.css.input-type-email').first();
     await user.waitFor({ state: 'visible', timeout: 30_000 });
     await user.fill(email);
     await user.press('Enter');
-    const pw = this.page.locator('input[type="password"]').first();
+    const pw = locatorOf(this.page, 'login.css.input-type-password').first();
     await pw.waitFor({ state: 'visible', timeout: 30_000 });
     await pw.fill(password);
     await pw.press('Enter');

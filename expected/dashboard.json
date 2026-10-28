@@ -1,0 +1,6 @@
+{
+  "dashboard.text.current-repository": {"regex":"Current repository\\s+\\S+\\s*\\/\\s*\\S+","flags":"i"},
+  "dashboard.attr.confidence-engine": {"regex":"\\/confidence-engine"},
+  "dashboard.text.current": {"regex":"Current:","flags":"i"},
+  "dashboard.attr.false": {"text":"false"}
+}

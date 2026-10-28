@@ -2,7 +2,9 @@ import { expect, Page } from '@playwright/test';
 import { CaseHandler } from '../../core/runner/registerCases';
 import { RepoPage } from '../repo/shared/RepoPage';
 import { bodyText, norm, open, waitText } from '../flow/ui';
+import { obj as locatorOf } from '../../core/keywords/obj';
 
+import { expected as expectedOf } from '../../core/keywords/expected';
 /**
  * The Account module: the Account page (/account) and the Billing page it links to (/billing). Verified live on QA (15 Oct).
  * Plan name, price, limits and dates differ from account to account, so every check reads what the page shows and compares the
@@ -71,21 +73,21 @@ export async function readBilling(page: Page): Promise<Billing> {
 const lc = (s: string): string => norm(s).toLowerCase();
 const accountPage = async (page: Page, input: import('../../core/types').InputConfig): Promise<void> => {
   await open(page, input, '/account');
-  await expect(page.getByRole('heading', { name: /^\s*account\s*$/i }).first()).toBeVisible();
+  await expect(locatorOf(page, 'account.heading.account').first()).toBeVisible();
 };
 
 export const accountSteps: Record<string, CaseHandler<RepoPage>> = {
   'ACC-001': async ({ page, input, check, snap }) => {
     await open(page, input, '/account');
     await check('The address is /account', () => expect(new URL(page.url()).pathname.replace(/\/+$/, '')).toBe('/account'));
-    const title = page.getByRole('heading', { name: /^\s*account\s*$/i }).first();
+    const title = locatorOf(page, 'account.heading.account').first();
     await check('The page title "Account" is shown', () => expect(title).toBeVisible());
     await check('The sub-title "Manage your profile, organization, plan, and usage." is shown', () =>
-      expect(page.getByText(/Manage your profile,?\s*organi[sz]ation,?\s*plan,?\s*and usage/i).first()).toBeVisible());
+      expect(locatorOf(page, 'account.text.manage-your-profile-organi-sz-ation').first()).toBeVisible());
     await check('The breadcrumb shows "Testable" (a link to /confidence-engine) and "Account"', async () => {
-      const nav = page.getByRole('navigation', { name: /breadcrumb/i });
-      await expect(nav.getByRole('link', { name: /testable/i })).toHaveAttribute('href', /\/confidence-engine/);
-      await expect(nav).toContainText(/account/i);
+      const nav = locatorOf(page, 'account.navigation.breadcrumb');
+      await expect(locatorOf(nav, 'account.link.testable')).toHaveAttribute('href', expectedOf('account.attr.confidence-engine'));
+      await expect(nav).toContainText(expectedOf('account.text.account'));
     });
     await snap('Account page title and sub-title', title);
   },
@@ -93,7 +95,7 @@ export const accountSteps: Record<string, CaseHandler<RepoPage>> = {
   'ACC-002': async ({ page, input, check, snap }) => {
     await accountPage(page, input);
     const a = await readAccount(page);
-    const head = page.getByRole('heading', { name: /customer and organi[sz]ation/i }).first();
+    const head = locatorOf(page, 'account.heading.customer-and-organi-sz-ation').first();
     await check('The section "Customer and organization" is shown', () => expect(head).toBeVisible());
     await check('"Customer" is shown with a name', () => expect(a.customer, 'the Customer value is empty').not.toBe(''));
     await check('"Organization" is shown with a name', () => expect(a.organization, 'the Organization value is empty').not.toBe(''));
@@ -104,7 +106,7 @@ export const accountSteps: Record<string, CaseHandler<RepoPage>> = {
     await accountPage(page, input);
     const a = await readAccount(page);
     note(`Plan card reads: ${a.plan} · ${a.status} · $${a.price}/month · renews ${a.renews}`);
-    const label = page.getByText(/^\s*current plan\s*$/i).first();
+    const label = locatorOf(page, 'account.text.current-plan').first();
     await check('The card "Current plan" is shown', () => expect(label).toBeVisible());
     await check('A plan name is shown', () => expect(a.plan, 'no plan name found next to "Current plan"').not.toBe(''));
     await check('The plan status (for example "Active") is shown', () => expect(a.status, 'no plan status word found').not.toBe(''));
@@ -116,10 +118,10 @@ export const accountSteps: Record<string, CaseHandler<RepoPage>> = {
 
   'ACC-004': async ({ page, input, check, snap }) => {
     await accountPage(page, input);
-    const upgrade = page.getByRole('link', { name: /upgrade plan/i }).first();
+    const upgrade = locatorOf(page, 'account.link.upgrade-plan').first();
     await check('"Upgrade plan" is shown and points to /billing', async () => {
       await expect(upgrade).toBeVisible();
-      await expect(upgrade).toHaveAttribute('href', /\/billing/);
+      await expect(upgrade).toHaveAttribute('href', expectedOf('account.attr.billing'));
     });
     await snap('Upgrade plan button', upgrade);
     await check('Clicking it opens the Billing page (/billing)', async () => {
@@ -133,31 +135,31 @@ export const accountSteps: Record<string, CaseHandler<RepoPage>> = {
     await accountPage(page, input);
     const a = await readAccount(page);
     note(`Runs used ${a.used} / ${a.limit}; remaining ${a.remaining}; resets ${a.resets}`);
-    const head = page.getByRole('heading', { name: /usage\s*&\s*limits/i }).first();
+    const head = locatorOf(page, 'account.heading.usage-limits').first();
     await check('"Usage & limits" shows "<used> / <limit> used"', () => expect(Number.isNaN(a.used) || Number.isNaN(a.limit), 'no "<used> / <limit> used" found').toBe(false), head);
     await check('Used is not more than the limit', () => expect(a.used).toBeLessThanOrEqual(a.limit));
     await check('"<n> remaining" equals limit minus used', () => expect(a.remaining, `remaining ${a.remaining}, limit ${a.limit} minus used ${a.used} = ${a.limit - a.used}`).toBe(a.limit - a.used));
     await check('The plan card and the Usage & limits section show the same "used / limit"', () => expect(lc(a.usedAgain)).toBe(lc(`${a.used} / ${a.limit}`)));
     await check('The run limit equals the "runs/month" of the plan', () => expect(a.included?.runs).toBe(a.limit));
     await check('"Resets <date>" is the same date as "Renews <date>"', () => expect(lc(a.resets)).toBe(lc(a.renews)));
-    await check('A progress bar is shown for the runs', () => expect(page.getByRole('progressbar').first()).toBeVisible());
+    await check('A progress bar is shown for the runs', () => expect(locatorOf(page, 'account.progressbar.item').first()).toBeVisible());
     await snap('Runs usage', head);
   },
 
   'ACC-006': async ({ page, input, check, note, snap }) => {
     await accountPage(page, input);
     const a = await readAccount(page);
-    const head = page.getByRole('heading', { name: /^\s*members\s*$/i }).first();
+    const head = locatorOf(page, 'account.heading.members').first();
     note(`Seats used ${a.seatsUsed} / ${a.seatsLimit}`);
     await check('"Members" shows "<used> / <limit> seats used"', () => expect(Number.isNaN(a.seatsUsed) || Number.isNaN(a.seatsLimit), 'no "<used> / <limit> seats used" found').toBe(false), head);
     await check('Used seats are not more than the seat limit', () => expect(a.seatsUsed).toBeLessThanOrEqual(a.seatsLimit));
     const full = a.seatsUsed >= a.seatsLimit;
     await check(full ? 'All seats are used, so "Seat limit reached" and "Upgrade to invite members" are shown' : 'Seats are free, so no "Seat limit reached" warning is shown', async () => {
-      const warn = page.getByText(/seat limit reached/i);
-      if (full) { await expect(warn.first()).toBeVisible(); await expect(page.getByText(/upgrade to invite members/i).first()).toBeVisible(); }
+      const warn = locatorOf(page, 'account.text.seat-limit-reached');
+      if (full) { await expect(warn.first()).toBeVisible(); await expect(locatorOf(page, 'account.text.upgrade-to-invite-members').first()).toBeVisible(); }
       else await expect(warn).toHaveCount(0);
     });
-    const viewAccess = page.getByText(/^\s*view access\s*$/i).first();
+    const viewAccess = locatorOf(page, 'account.text.view-access').first();
     if (await viewAccess.isVisible().catch(() => false)) {
       await check('"View access" is shown', () => expect(viewAccess).toBeVisible());
     } else {
@@ -169,7 +171,7 @@ export const accountSteps: Record<string, CaseHandler<RepoPage>> = {
   'ACC-007': async ({ page, input, check, snap }) => {
     await accountPage(page, input);
     const a = await readAccount(page);
-    const head = page.getByRole('heading', { name: /^\s*compute\s*$/i }).first();
+    const head = locatorOf(page, 'account.heading.compute').first();
     await check('The card "Compute" is shown', () => expect(head).toBeVisible());
     await check('"<n> vCPU" is shown', () => expect(a.vcpu, 'no "<n> vCPU" found').toBeGreaterThan(0));
     await check('"<n> GiB memory" is shown', () => expect(a.gib, 'no "<n> GiB memory" found').toBeGreaterThan(0));
@@ -180,7 +182,7 @@ export const accountSteps: Record<string, CaseHandler<RepoPage>> = {
   'ACC-008': async ({ page, input, check, note, snap }) => {
     await accountPage(page, input);
     const a = await readAccount(page);
-    const head = page.getByRole('heading', { name: /^\s*workers\s*$/i }).first();
+    const head = locatorOf(page, 'account.heading.workers').first();
     note(`Workers reads: ${a.workers || '(nothing)'}`);
     await check('The card "Workers" is shown', () => expect(head).toBeVisible());
     await check('The card shows a state (for example "Unavailable") or a number', () => expect(a.workers, 'nothing is written under "Workers"').not.toBe(''));
@@ -189,13 +191,13 @@ export const accountSteps: Record<string, CaseHandler<RepoPage>> = {
 
   'ACC-009': async ({ page, input, check, snap }) => {
     await accountPage(page, input);
-    const head = page.getByRole('heading', { name: /^\s*capabilities\s*$/i }).first();
+    const head = locatorOf(page, 'account.heading.capabilities').first();
     await check('The section "Capabilities" is shown', () => expect(head).toBeVisible());
     for (const group of ['Execution', 'Reliability']) {
       const h = page.getByRole('heading', { name: new RegExp(`^\\s*${group}\\s*$`, 'i') }).first();
       await check(`"${group}" is shown with at least one item`, async () => {
         await expect(h).toBeVisible();
-        const items = await h.locator('xpath=following::ul[1]/li').count();
+        const items = await locatorOf(h, 'account.css.xpath-following-ul-1-li').count();
         expect(items, `no list items under "${group}"`).toBeGreaterThan(0);
       });
     }
@@ -209,11 +211,11 @@ export const accountSteps: Record<string, CaseHandler<RepoPage>> = {
 
   'ACC-010': async ({ page, input, check, snap }) => {
     await accountPage(page, input);
-    const head = page.getByRole('heading', { name: /^\s*billing\s*$/i }).first();
+    const head = locatorOf(page, 'account.heading.billing').first();
     await check('The section "Billing" says "Manage your payment method, invoices, and subscription."', () =>
-      expect(page.getByText(/Manage your payment method,?\s*invoices,?\s*and subscription/i).first()).toBeVisible(), head);
-    const link = page.getByRole('link', { name: /manage billing/i }).first();
-    await check('"Manage billing" points to /billing', () => expect(link).toHaveAttribute('href', /\/billing/));
+      expect(locatorOf(page, 'account.text.manage-your-payment-method-invoices').first()).toBeVisible(), head);
+    const link = locatorOf(page, 'account.link.manage-billing').first();
+    await check('"Manage billing" points to /billing', () => expect(link).toHaveAttribute('href', expectedOf('account.attr.billing')));
     await snap('Manage billing link', link);
     await check('Clicking it opens the Billing page (/billing)', async () => {
       await link.click();
@@ -225,10 +227,10 @@ export const accountSteps: Record<string, CaseHandler<RepoPage>> = {
     await open(page, input, '/billing');
     const b = await readBilling(page);
     note(`Billing page: ${b.plan} · $${b.price}/month · billing to ${b.customer} / ${b.organization}`);
-    const title = page.getByText(/^\s*change plan\s*$/i).first();
+    const title = locatorOf(page, 'account.text.change-plan').first();
     await check('The page title "Change Plan" is shown', () => expect(title).toBeVisible());
     await check('"Your subscription applies to everyone in the organization." is shown', () =>
-      expect(page.getByText(/Your subscription applies to everyone in the organi[sz]ation/i).first()).toBeVisible());
+      expect(locatorOf(page, 'account.text.your-subscription-applies-to-everyon').first()).toBeVisible());
     await check('"Billing to" shows the customer and the organization', () => {
       expect(b.customer, 'no customer name after "Billing to"').not.toBe('');
       expect(b.organization, 'no organization after the customer name').not.toBe('');
@@ -241,7 +243,7 @@ export const accountSteps: Record<string, CaseHandler<RepoPage>> = {
     const a = await readAccount(page);
     await open(page, input, '/billing');
     const b = await readBilling(page);
-    const summary = page.getByText(/^\s*order summary\s*$/i).first();
+    const summary = locatorOf(page, 'account.text.order-summary').first();
     note(`Account: ${a.plan} $${a.price}, ${a.included?.runs} runs, ${a.included?.gib} GiB | Billing: ${b.plan} $${b.price}, ${b.runs} runs, ${b.memory} GiB`);
     await check('"Order summary" is shown', () => expect(summary).toBeVisible());
     await check('Billing to is the same customer and organization as on the Account page', () => {
@@ -259,16 +261,16 @@ export const accountSteps: Record<string, CaseHandler<RepoPage>> = {
   'ACC-013': async ({ page, input, check, snap }) => {
     await open(page, input, '/billing');
     await readBilling(page);
-    const terms = page.getByText(/I have read and agree to the Terms of Service/i).first();
+    const terms = locatorOf(page, 'account.text.i-have-read-and-agree-to-the-terms-o').first();
     await check('"I have read and agree to the Terms of Service." is shown', () => expect(terms).toBeVisible());
     await check('"Terms of Service" is a link', async () => {
-      const link = page.getByRole('link', { name: /terms of service/i }).first();
+      const link = locatorOf(page, 'account.link.terms-of-service').first();
       await expect(link).toBeVisible();
       await expect(link).toHaveAttribute('href', /\S/);
     });
-    await check('"Secure checkout powered by Stripe" is shown', () => expect(page.getByText(/secure checkout powered by stripe/i).first()).toBeVisible());
+    await check('"Secure checkout powered by Stripe" is shown', () => expect(locatorOf(page, 'account.text.secure-checkout-powered-by-stripe').first()).toBeVisible());
     await check('The button for the plan in use reads "Current Plan" and cannot be pressed (it is not clicked here)', async () => {
-      const btn = page.getByRole('button', { name: /^\s*current plan\s*$/i }).last();
+      const btn = locatorOf(page, 'account.button.current-plan').last();
       await expect(btn).toBeVisible();
       await expect(btn).toBeDisabled();
     });
@@ -277,16 +279,16 @@ export const accountSteps: Record<string, CaseHandler<RepoPage>> = {
 
   'ACC-014': async ({ page, input, check, snap }) => {
     await open(page, input, '/billing');
-    const back = page.getByRole('link', { name: /back to account/i }).first();
+    const back = locatorOf(page, 'account.link.back-to-account').first();
     await check('"Back to Account" is shown and points to /account', async () => {
       await expect(back).toBeVisible();
-      await expect(back).toHaveAttribute('href', /\/account/);
+      await expect(back).toHaveAttribute('href', expectedOf('account.attr.account'));
     });
     await snap('Back to Account', back);
     await check('Clicking it opens the Account page', async () => {
       await back.click();
       await expect(page).toHaveURL(/\/account/i);
-      await expect(page.getByRole('heading', { name: /^\s*account\s*$/i }).first()).toBeVisible();
+      await expect(locatorOf(page, 'account.heading.account').first()).toBeVisible();
     });
   },
 
@@ -294,7 +296,7 @@ export const accountSteps: Record<string, CaseHandler<RepoPage>> = {
     await accountPage(page, input);
     const a = await readAccount(page);
     await open(page, input, '/execution-assistant');
-    const meter = page.locator('a[href="/account"]').filter({ hasText: /Executions:\s*\d+\s*\/\s*\d+/i }).first();
+    const meter = locatorOf(page, 'account.css.a-href-account').filter({ hasText: /Executions:\s*\d+\s*\/\s*\d+/i }).first();
     await expect(meter, 'the "Executions: n / m" link is not on the Execution Assistant').toBeVisible({ timeout: 20_000 });
     const m = ((await meter.innerText()) || '').match(/Executions:\s*(\d+)\s*\/\s*(\d+)/i);
     note(`Header meter reads ${m?.[1]} / ${m?.[2]}; Account page reads ${a.used} / ${a.limit}`);

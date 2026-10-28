@@ -1,0 +1,6 @@
+{
+  "account.attr.confidence-engine": {"regex":"\\/confidence-engine"},
+  "account.text.account": {"regex":"account","flags":"i"},
+  "account.attr.billing": {"regex":"\\/billing"},
+  "account.attr.account": {"regex":"\\/account"}
+}

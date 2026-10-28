@@ -3,7 +3,9 @@ import { AppShell } from '../../../core/pages/AppShell';
 import { CaseHandler } from '../../../core/runner/registerCases';
 import { ANY_AUTH_URL, LOGIN_PATH, LOGIN_URL, NormalLoginPage } from './normalLogin.page';
 import { loose } from '../shared/text';
+import { obj as locatorOf } from '../../../core/keywords/obj';
 
+import { expected as expectedOf } from '../../../core/keywords/expected';
 /** Text of the first error shown (never waits long, never throws - it is only a note). */
 async function shownText(loc: import('@playwright/test').Locator): Promise<string> {
   return (await loc.first().innerText({ timeout: 3_000 }).catch(() => '(could not read it)')).trim();
@@ -36,11 +38,11 @@ export const normalHandlers: Record<string, CaseHandler<NormalLoginPage>> = {
 
   'LOGIN-NRM-002': async ({ pg, page, data, check, snap }) => {
     await pg.open();
-    await snap('Login page sub-heading and tagline', page.getByText(loose(data.subheading ?? '')).and(page.locator(':visible')).first());
+    await snap('Login page sub-heading and tagline', page.getByText(loose(data.subheading ?? '')).and(locatorOf(page, 'login.css.visible')).first());
     await check(`Sub-heading "${data.subheading}" is visible`, () =>
-      expect(page.getByText(loose(data.subheading ?? '')).and(page.locator(':visible')).first()).toBeVisible());
+      expect(page.getByText(loose(data.subheading ?? '')).and(locatorOf(page, 'login.css.visible')).first()).toBeVisible());
     await check(`Tagline "${data.tagline}" is visible`, () =>
-      expect(page.getByText(loose(data.tagline ?? '')).and(page.locator(':visible')).first()).toBeVisible());
+      expect(page.getByText(loose(data.tagline ?? '')).and(locatorOf(page, 'login.css.visible')).first()).toBeVisible());
   },
 
   'LOGIN-NRM-003': async ({ pg, data, check, snap }) => {
@@ -51,7 +53,7 @@ export const normalHandlers: Record<string, CaseHandler<NormalLoginPage>> = {
       expect(pg.email).toHaveAttribute('placeholder', loose(data.placeholder ?? '', { exact: true })));
     await check('Email box accepts typed text', async () => {
       await pg.email.fill('sample@example.com');
-      await expect(pg.email).toHaveValue('sample@example.com');
+      await expect(pg.email).toHaveValue(expectedOf('login.value.sample-example-com'));
     });
     await snap('Email box with sample text typed', pg.email);
   },
@@ -64,7 +66,7 @@ export const normalHandlers: Record<string, CaseHandler<NormalLoginPage>> = {
       expect(pg.password).toHaveAttribute('placeholder', loose(data.placeholder ?? '', { exact: true })));
     await check('Password box accepts typed text', async () => {
       await pg.password.fill('Sample@123');
-      await expect(pg.password).toHaveValue('Sample@123');
+      await expect(pg.password).toHaveValue(expectedOf('login.value.sample-123'));
     });
     await snap('Password box with the typed text hidden as dots', pg.password);
   },
@@ -72,7 +74,7 @@ export const normalHandlers: Record<string, CaseHandler<NormalLoginPage>> = {
   'LOGIN-NRM-005': async ({ pg, data, check, step, snap }) => {
     await pg.open();
     await pg.password.fill(data.sample_password ?? 'Sample@123');
-    await check('Password is masked by default (type=password)', () => expect(pg.password).toHaveAttribute('type', 'password'));
+    await check('Password is masked by default (type=password)', () => expect(pg.password).toHaveAttribute('type', expectedOf('login.attr.password')));
     await check('A "Show password" eye icon is visible', async () => {
       await expect(pg.passwordToggle).toBeVisible();
       await expect(pg.passwordToggle).toHaveAccessibleName(/show\s*password/i);
@@ -80,10 +82,10 @@ export const normalHandlers: Record<string, CaseHandler<NormalLoginPage>> = {
     await snap('Password box (hidden) with its eye icon', [pg.password, pg.passwordToggle]);
     await step('Click the eye icon', () => pg.passwordToggle.click());
     await check('After clicking the eye icon the password is visible (type=text)', () =>
-      expect(pg.password).toHaveAttribute('type', 'text'));
+      expect(pg.password).toHaveAttribute('type', expectedOf('login.attr.text')));
     await check('The icon now reads "Hide password"', () => expect(pg.passwordToggle).toHaveAccessibleName(/hide\s*password/i));
     await step('Click the eye icon again', () => pg.passwordToggle.click());
-    await check('Clicking again masks the password (type=password)', () => expect(pg.password).toHaveAttribute('type', 'password'));
+    await check('Clicking again masks the password (type=password)', () => expect(pg.password).toHaveAttribute('type', expectedOf('login.attr.password')));
   },
 
   'LOGIN-NRM-006': async ({ pg, data, check, snap }) => {
@@ -113,7 +115,7 @@ export const normalHandlers: Record<string, CaseHandler<NormalLoginPage>> = {
     await app.expectAuthenticated();
 
     const listed = (data.paths ?? '').split(',').map((p) => p.trim()).filter(Boolean);
-    const hrefs = await page.locator('a[href^="/"]').evaluateAll((els) =>
+    const hrefs = await locatorOf(page, 'login.css.a-href').evaluateAll((els) =>
       els.map((e) => e.getAttribute('href') || ''));
     const max = Number(data.max_links || 3);
     const discovered = [...new Set(hrefs)]
@@ -173,8 +175,8 @@ export const normalHandlers: Record<string, CaseHandler<NormalLoginPage>> = {
     await check(`Message "${data.email_error}" is shown`, () => expect(pg.fieldError(data.email_error ?? '')).toBeVisible());
     await check(`Message "${data.password_error}" is shown`, () => expect(pg.fieldError(data.password_error ?? '')).toBeVisible());
     await snap('Both required-field messages under the empty boxes', [pg.fieldError(data.email_error ?? ''), pg.fieldError(data.password_error ?? '')]);
-    await check('Email box is marked invalid', () => expect(pg.email).toHaveAttribute('aria-invalid', 'true'));
-    await check('Password box is marked invalid', () => expect(pg.password).toHaveAttribute('aria-invalid', 'true'));
+    await check('Email box is marked invalid', () => expect(pg.email).toHaveAttribute('aria-invalid', expectedOf('login.attr.true')));
+    await check('Password box is marked invalid', () => expect(pg.password).toHaveAttribute('aria-invalid', expectedOf('login.attr.true')));
     await check('User stays on the login page', () => expect(page).toHaveURL(LOGIN_URL));
   },
 
@@ -248,7 +250,7 @@ export const normalHandlers: Record<string, CaseHandler<NormalLoginPage>> = {
     const target = data.path ?? '/execution-assistant';
     await page.goto(`${input.baseUrl}${target}`);
     await check(`Opening ${target} without logging in redirects to /auth/`, () => expect(page).toHaveURL(ANY_AUTH_URL));
-    await snap('Login page shown instead of the protected page', page.getByRole('heading').first());
+    await snap('Login page shown instead of the protected page', locatorOf(page, 'login.heading.item').first());
   },
 
   'LOGIN-NRM-020': async ({ pg, page, data, input, check, snap }) => {

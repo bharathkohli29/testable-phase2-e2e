@@ -1,4 +1,5 @@
 import { expect, Page } from '@playwright/test';
+import { obj as locatorOf } from '../../core/keywords/obj';
 
 /**
  * Reads the numbers of ONE run from the four places that show them (Confidence Engine, Confidence Object, Confidence Graph, Runs Dashboard)
@@ -8,7 +9,7 @@ import { expect, Page } from '@playwright/test';
 const norm = (s: string): string => s.replace(/\s+/g, ' ').trim();
 const n = (s: string | undefined): number | undefined => (s === undefined || /^n\/a$/i.test(s) ? undefined : Number(s));
 const esc = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const pageText = async (page: Page): Promise<string> => norm((await page.locator('body').innerText().catch(() => '')) || '');
+const pageText = async (page: Page): Promise<string> => norm((await locatorOf(page, 'flow.css.body').innerText().catch(() => '')) || '');
 
 export interface EngineView { score?: number; verdict?: string; whitebox?: number; total?: number; passed?: number; failed?: number; tasks?: string; breadcrumbRun?: string; header?: string }
 export interface ObjectView { avg?: number; org?: number; whitebox?: number; validations?: number; risks?: number; card?: number; breadcrumbRun?: string }

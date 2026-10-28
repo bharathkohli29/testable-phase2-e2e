@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import type { Locator, Page } from '@playwright/test';
+import type { Frame, FrameLocator, Locator, Page } from '@playwright/test';
 import { ROOT } from '../paths';
 
 /**
@@ -29,7 +29,21 @@ export interface ObjectDef {
   placeholder?: string | string[];
   label?: string | string[];
   css?: string;
-  match?: 'exact' | 'contains' | 'regex';
+  /** How the text is compared. exact / contains / regex = see above; flex = words in order, spaces and dashes interchangeable; loose = words in order,
+   *  ignoring punctuation, plural s and Organization/Organisation; loose-exact = loose from start to end; playwright = hand the text to Playwright as it is. */
+  match?: 'exact' | 'contains' | 'regex' | 'flex' | 'loose' | 'loose-exact' | 'playwright';
+  /** Flags of a regex (default "i"). */
+  flags?: string;
+  /** playwright / testid: Playwright's own "exact" option (whole text, case sensitive). */
+  exact?: boolean;
+  /** Role options passed to getByRole as they are. */
+  level?: number;
+  checked?: boolean;
+  pressed?: boolean;
+  selected?: boolean;
+  expanded?: boolean;
+  disabled?: boolean;
+  includeHidden?: boolean;
   within?: string;
   pick?: 'first' | 'last' | 'all' | number;
   danger?: string;
@@ -42,8 +56,8 @@ export const OBJECTS_DIR = path.join(ROOT, 'objects');
 export const ROUTES_FILE = path.join(OBJECTS_DIR, 'routes.json');
 
 const KINDS = ['role', 'testid', 'text', 'placeholder', 'label', 'css'] as const;
-const MATCHES = ['exact', 'contains', 'regex'];
-const ROLES = new Set(['alert', 'alertdialog', 'article', 'button', 'cell', 'checkbox', 'combobox', 'dialog', 'heading', 'img', 'link', 'list', 'listitem', 'menu', 'menuitem', 'navigation', 'option', 'radio', 'row', 'searchbox', 'status', 'switch', 'tab', 'table', 'tablist', 'tabpanel', 'textbox', 'tooltip']);
+const MATCHES = ['exact', 'contains', 'regex', 'flex', 'loose', 'loose-exact', 'playwright'];
+const ROLES = new Set(['alert', 'alertdialog', 'application', 'article', 'banner', 'blockquote', 'button', 'caption', 'cell', 'checkbox', 'code', 'columnheader', 'combobox', 'complementary', 'contentinfo', 'definition', 'deletion', 'dialog', 'directory', 'document', 'emphasis', 'feed', 'figure', 'form', 'generic', 'grid', 'gridcell', 'group', 'heading', 'img', 'insertion', 'link', 'list', 'listbox', 'listitem', 'log', 'main', 'marquee', 'math', 'meter', 'menu', 'menubar', 'menuitem', 'menuitemcheckbox', 'menuitemradio', 'navigation', 'none', 'note', 'option', 'paragraph', 'presentation', 'progressbar', 'radio', 'radiogroup', 'region', 'row', 'rowgroup', 'rowheader', 'scrollbar', 'search', 'searchbox', 'separator', 'slider', 'spinbutton', 'status', 'strong', 'subscript', 'superscript', 'switch', 'tab', 'table', 'tablist', 'tabpanel', 'term', 'textbox', 'time', 'timer', 'toolbar', 'tooltip', 'tree', 'treegrid', 'treeitem']);
 
 const esc = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const arr = (v: string | string[] | undefined): string[] => (v === undefined ? [] : Array.isArray(v) ? v : [v]);
@@ -88,7 +102,7 @@ export function loadObjects(dir: string = OBJECTS_DIR): ObjectRepo {
     if (def.within !== undefined && !repo[def.within]) problems.push(`${where}: within "${def.within}" is not defined`);
     if (def.match === 'regex') {
       for (const t of arr(def.name ?? def.text ?? def.placeholder ?? def.label)) {
-        try { new RegExp(t, 'i'); } catch { problems.push(`${where}: "${t}" is not a valid regular expression`); }
+        try { new RegExp(t, def.flags ?? 'i'); } catch { problems.push(`${where}: "${t}" is not a valid regular expression`); }
       }
     }
   }
@@ -122,30 +136,64 @@ export function resolveRoute(nameOrPath: string, routes: Record<string, string>)
   throw new Error(`"${v}" is not a known route (routes.json has: ${Object.keys(routes).join(', ') || 'none'}) and does not start with "/".`);
 }
 
-function matcher(text: string, mode: ObjectDef['match']): RegExp {
-  if (mode === 'regex') return new RegExp(text, 'i');
-  if (mode === 'contains') return new RegExp(esc(text.trim()).replace(/\s+/g, '\\s+'), 'i');
-  return new RegExp(`^\\s*${esc(text.trim()).replace(/\s+/g, '\\s+')}\\s*$`, 'i'); // whole text, any case, any spacing
+const escRe = (t: string): string => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const WORD = /[\p{L}\p{N}]+/gu;
+
+/** The same words-in-order matching the check code uses (modules/login/shared/text.ts), kept here so the repository does not depend on a module. */
+function looseSource(text: string, exact: boolean): string {
+  const words = text.match(WORD) ?? [];
+  if (words.length === 0) return escRe(text);
+  const parts = words.map((w) => {
+    const lower = w.toLowerCase();
+    if (/^organi[sz]ations?$/.test(lower)) return 'organi[sz]ations?';
+    const e = escRe(lower);
+    return lower.length > 3 && lower.endsWith('s') ? `${e.slice(0, -1)}s?` : lower.length > 3 ? `${e}s?` : e;
+  });
+  const body = parts.join('[\\W_]*');
+  return exact ? `^[\\W_]*${body}[\\W_]*$` : body;
+}
+
+/** The text/regex a definition compares with. "playwright" returns the text itself (Playwright's own matching). */
+export function matcher(text: string, mode: ObjectDef['match'], flags?: string): RegExp | string {
+  switch (mode) {
+    case 'playwright': return text;
+    case 'regex': return new RegExp(text, flags ?? 'i');
+    case 'contains': return new RegExp(escRe(text.trim()).replace(/\s+/g, '\\s+'), 'i');
+    case 'flex': return new RegExp(`^\\s*${text.trim().split(/[\s-]+/).map(escRe).join('[\\s-]*')}\\s*$`, 'i');
+    case 'loose': return new RegExp(looseSource(text, false), 'i');
+    case 'loose-exact': return new RegExp(looseSource(text, true), 'i');
+    default: return new RegExp(`^\\s*${escRe(text.trim()).replace(/\s+/g, '\\s+')}\\s*$`, 'i'); // whole text, any case, any spacing
+  }
 }
 
 /** Builds the Playwright locator for an object. `all` ignores "pick" (used when the keyword counts or loops). */
-export function locate(page: Page, repo: ObjectRepo, name: string, opts: { all?: boolean } = {}): Locator {
+export type Scope = Page | Locator | Frame | FrameLocator;
+export function locate(page: Scope, repo: ObjectRepo, name: string, opts: { all?: boolean } = {}): Locator {
   const def = repo[name];
   if (!def) {
     const near = Object.keys(repo).filter((k) => k.toLowerCase().includes(name.toLowerCase().split('.').pop() ?? '')).slice(0, 5);
     throw new Error(`Object "${name}" is not in the object repository (/objects/*.json).${near.length ? ` Similar names: ${near.join(', ')}.` : ''}`);
   }
-  const scope: Page | Locator = def.within ? locate(page, repo, def.within, { all: false }) : page;
+  const scope: Scope = def.within ? locate(page, repo, def.within, { all: false }) : page;
+  const roleOptions = (n: RegExp | string | undefined): Record<string, unknown> => {
+    const o: Record<string, unknown> = {};
+    if (n !== undefined) o.name = n;
+    for (const k of ['exact', 'level', 'checked', 'pressed', 'selected', 'expanded', 'disabled', 'includeHidden'] as const) if (def[k] !== undefined) o[k] = def[k];
+    return o;
+  };
   const one = (n?: string): Locator => {
     if (def.testid !== undefined) return scope.getByTestId(def.testid);
     if (def.css !== undefined) return scope.locator(def.css);
+    const m = n === undefined ? undefined : matcher(n, def.match, def.flags);
     if (def.role !== undefined) {
       const role = def.role as Parameters<Page['getByRole']>[0];
-      return n === undefined ? scope.getByRole(role) : scope.getByRole(role, { name: matcher(n, def.match) });
+      const o = roleOptions(m);
+      return Object.keys(o).length ? scope.getByRole(role, o) : scope.getByRole(role);
     }
-    if (def.placeholder !== undefined) return scope.getByPlaceholder(matcher(n ?? '', def.match));
-    if (def.label !== undefined) return scope.getByLabel(matcher(n ?? '', def.match));
-    return scope.getByText(matcher(n ?? '', def.match));
+    const opt = def.exact !== undefined ? { exact: def.exact } : undefined;
+    if (def.placeholder !== undefined) return scope.getByPlaceholder(m ?? '', opt);
+    if (def.label !== undefined) return scope.getByLabel(m ?? '', opt);
+    return scope.getByText(m ?? '', opt);
   };
   const names = arr(def.role !== undefined ? def.name : def.text ?? def.placeholder ?? def.label);
   let loc: Locator;

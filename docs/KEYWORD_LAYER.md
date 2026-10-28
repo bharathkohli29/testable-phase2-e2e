@@ -58,3 +58,16 @@ First run only remembers the commit. Changes then show up in `git diff objects/`
 
 ## What already uses the repository
 The new keyword cases and the Login module (`modules/login/normal`: login page, forgot password, verification, sign-out confirmation), in `objects/login.json`. Other modules still have their locators in code and are moved one module at a time. In code: `obj(page, 'login.forgotPasswordLink')` (`core/keywords/obj.ts`).
+
+## Parameterization: what lives where
+
+| What | Where | Used as |
+|---|---|---|
+| Locators of every module (button names, labels, placeholders, test ids) | `objects/<module>.json` (one entry per line) | `locatorOf(page, 'repo.button.confirm')` |
+| Order of the modules, titles, timeouts, on/off (Sign up is off) | `config/modules.json` | read by `modules/flow/journey.spec.ts` |
+| Expected texts the checks compare with | `expected/<module>.json` | `expectedOf('graph.value.draft-only-not-sent')` |
+| Credentials | `.env` (encrypted automatically) | never in code or Excel |
+
+* Change the order or switch a module off: edit `config/modules.json` only (the test names, e.g. `-g "1 · Login module"`, come from its `title`).
+* Before every run, the site's code is compared with the last run. Renamed texts are changed in `objects/` and in `expected/` (exact texts and plain-word patterns). Patterns with symbols (for example `/\/billing/`) are written by people and are never edited automatically; they are listed under "needs a person" only when it applies.
+* Counts, addresses and numbers that a check computes stay in the code on purpose (they are not texts a person reads).

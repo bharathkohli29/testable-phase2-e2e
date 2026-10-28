@@ -1,0 +1,13 @@
+{
+  "login.text.if-an-account-exists-we": {"regex":"if an account exists,?\\s*we.ll email a verification code.*choose a new password","flags":"i"},
+  "login.attr.email": {"text":"email"},
+  "login.attr.auth-login": {"regex":"\\/auth\\/login","flags":"i"},
+  "login.value.sample-example-com": {"text":"sample@example.com"},
+  "login.value.sample-123": {"text":"Sample@123"},
+  "login.attr.password": {"text":"password"},
+  "login.attr.text": {"text":"text"},
+  "login.attr.true": {"text":"true"},
+  "login.attr.listbox": {"text":"listbox"},
+  "login.attr.false": {"text":"false"},
+  "login.attr.sso-providers": {"text":"SSO Providers"}
+}

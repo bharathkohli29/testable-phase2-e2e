@@ -3,6 +3,7 @@ import { AppShell } from '../../../core/pages/AppShell';
 import { CaseHandler } from '../../../core/runner/registerCases';
 import { SsoLoginPage } from './ssoLogin.page';
 
+import { expected as expectedOf } from '../../../core/keywords/expected';
 /** "Okta|okta.com,Azure AD|azure.microsoft.com" -> [{ name, domain }] */
 function providers(text: string | undefined): Array<{ name: string; domain: string }> {
   return (text ?? '')
@@ -21,8 +22,8 @@ export const ssoHandlers: Record<string, CaseHandler<SsoLoginPage>> = {
     await snap('"Sign in with SSO" control (closed)', pg.trigger);
     await check('"Sign in with SSO" control is visible', () => expect(pg.trigger).toBeVisible());
     await check('Control is enabled', () => expect(pg.trigger).toBeEnabled());
-    await check('It announces a list (aria-haspopup=listbox)', () => expect(pg.trigger).toHaveAttribute('aria-haspopup', 'listbox'));
-    await check('The list is closed at first (aria-expanded=false)', () => expect(pg.trigger).toHaveAttribute('aria-expanded', 'false'));
+    await check('It announces a list (aria-haspopup=listbox)', () => expect(pg.trigger).toHaveAttribute('aria-haspopup', expectedOf('login.attr.listbox')));
+    await check('The list is closed at first (aria-expanded=false)', () => expect(pg.trigger).toHaveAttribute('aria-expanded', expectedOf('login.attr.false')));
     await check('The provider list is not shown yet', () => expect(pg.list).toBeHidden());
   },
 
@@ -31,10 +32,10 @@ export const ssoHandlers: Record<string, CaseHandler<SsoLoginPage>> = {
     await pg.open();
     await pg.trigger.click();
     await snap('SSO provider list open', [pg.trigger, pg.list]);
-    await check('Clicking opens the list (aria-expanded=true)', () => expect(pg.trigger).toHaveAttribute('aria-expanded', 'true'));
+    await check('Clicking opens the list (aria-expanded=true)', () => expect(pg.trigger).toHaveAttribute('aria-expanded', expectedOf('login.attr.true')));
     await check('Provider list is visible and labelled "SSO Providers"', async () => {
       await expect(pg.list).toBeVisible();
-      await expect(pg.list).toHaveAttribute('aria-label', 'SSO Providers');
+      await expect(pg.list).toHaveAttribute('aria-label', expectedOf('login.attr.sso-providers'));
     });
     await check(`List has ${expected.length} providers`, () => expect(pg.options).toHaveCount(expected.length));
     for (const p of expected) {
@@ -87,7 +88,7 @@ export const ssoHandlers: Record<string, CaseHandler<SsoLoginPage>> = {
     await pg.trigger.click();
     await check('Clicking "Sign in with SSO" again hides the provider list', async () => {
       await expect(pg.list).toBeHidden();
-      await expect(pg.trigger).toHaveAttribute('aria-expanded', 'false');
+      await expect(pg.trigger).toHaveAttribute('aria-expanded', expectedOf('login.attr.false'));
     });
   },
 

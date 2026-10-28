@@ -4,7 +4,9 @@ import { apiGet, tenantOf } from '../../core/pages/runApi';
 import { CaseHandler } from '../../core/runner/registerCases';
 import { inputs } from '../flow/helpers';
 import { RepoPage } from '../repo/shared/RepoPage';
+import { obj as locatorOf } from '../../core/keywords/obj';
 
+import { expected as expectedOf } from '../../core/keywords/expected';
 /**
  * The Confidence Graph module: every part of /confidence-engine?pillar=graph for the run that just finished.
  * Verified live. Checks use locators (roles, names, labels, text, table cells, chart elements) and the same run API calls the page
@@ -40,28 +42,28 @@ async function needGraph(ctx: Parameters<CaseHandler<RepoPage>>[0]): Promise<voi
   const onEngine = /\/confidence-engine/.test(page.url()) && !!runId(page);
   if (!onEngine) ctx.skip('The Confidence Engine page of a finished run is not open (the Execution module did not get a run to its results), so the Confidence Graph cannot be opened.');
   if (!/pillar=graph/.test(page.url())) {
-    await page.locator('a[href*="/confidence-engine"][href*="pillar=graph"]').first().click();
+    await locatorOf(page, 'graph.css.a-href-confidence-engine-href-pillar').first().click();
     await page.waitForURL(/pillar=graph/, { timeout: 30_000 }).catch(() => ctx.skip('Clicking "Confidence Graph" did not open the graph page.'));
   }
-  await page.getByRole('heading', { name: 'Confidence Graph', level: 2 }).waitFor({ state: 'visible', timeout: 30_000 })
+  await locatorOf(page, 'graph.heading.confidence-graph').waitFor({ state: 'visible', timeout: 30_000 })
     .catch(() => ctx.skip('The Confidence Graph page did not show its title.'));
-  await page.getByRole('table').first().waitFor({ state: 'visible', timeout: 30_000 }).catch(() => undefined);
+  await locatorOf(page, 'graph.table.item').first().waitFor({ state: 'visible', timeout: 30_000 }).catch(() => undefined);
 }
 
 /** The Previous / Next buttons that sit together with a pager label ("Page N of M ..."), so the two pagers of the page are never mixed up. */
 const pagerOf = (label: Locator) => {
-  const box = label.first().locator('xpath=ancestor::*[.//button[normalize-space()="Previous"]][1]');
-  return { prev: box.getByRole('button', { name: /^previous$/i }), next: box.getByRole('button', { name: /^next$/i }), box };
+  const box = locatorOf(label.first(), 'graph.css.xpath-ancestor-button-normalize-spac');
+  return { prev: locatorOf(box, 'graph.button.previous'), next: locatorOf(box, 'graph.button.next'), box };
 };
-const flowCard = (page: Page): Locator => page.getByText(/^\s*Whitebox Confidence\s*$/i).first().locator('xpath=ancestor::*[contains(translate(., "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz"), "static signals")][1]');
+const flowCard = (page: Page): Locator => locatorOf(locatorOf(page, 'graph.text.whitebox-confidence').first(), 'graph.css.xpath-ancestor-contains-translate-ab');
 const clock = (page: Page, iso: string): Promise<string> =>
   page.evaluate((i) => new Date(i).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }), iso);
 /** Passes as soon as ANY element of the locator is visible (the first match may be a hidden duplicate); polls instead of sleeping. */
 const anyShown = (loc: Locator, timeout = 10_000): Promise<void> =>
   expect.poll(async () => { for (const l of await loc.all()) if (await l.isVisible().catch(() => false)) return true; return false; }, { timeout }).toBe(true);
 /** The Pipeline Run History table (the one with the "Run ID" column) and its run rows (a "no results" row has no run id). */
-const historyTable = (page: Page): Locator => page.locator('table').filter({ has: page.locator('th', { hasText: /run id/i }) }).first();
-const runRows = (page: Page): Locator => historyTable(page).locator('tbody tr').filter({ hasText: /[0-9a-f]{8}-/i });
+const historyTable = (page: Page): Locator => locatorOf(page, 'graph.css.table').filter({ has: page.locator('th', { hasText: /run id/i }) }).first();
+const runRows = (page: Page): Locator => locatorOf(historyTable(page), 'graph.css.tbody-tr').filter({ hasText: /[0-9a-f]{8}-/i });
 /** Seconds from a duration text like "45s", "2m 10s" or "1h 5m 3s". */
 const seconds = (txt: string): number => {
   const g = (re: RegExp): number => num(txt.match(re)?.[1] ?? '0');
@@ -73,7 +75,7 @@ export const graphSteps: Record<string, CaseHandler<RepoPage>> = {
     await needGraph(ctx);
     const { page, check, snap } = ctx;
     const id = runId(page);
-    await snap('Confidence Graph page title and breadcrumb', page.getByRole('heading', { name: 'Confidence Graph', level: 2 }));
+    await snap('Confidence Graph page title and breadcrumb', locatorOf(page, 'graph.heading.confidence-graph'));
     await check('The address is /confidence-engine with pillar=graph for the same run id', () => {
       const u = new URL(page.url());
       expect(u.pathname).toBe('/confidence-engine');
@@ -87,19 +89,19 @@ export const graphSteps: Record<string, CaseHandler<RepoPage>> = {
       expect(u.searchParams.get('branch') ?? '').not.toBe('');
     });
     await check('The page is not sent to the login page', () => expect(page).not.toHaveURL(/\/auth\//));
-    await check('The page title "Confidence Graph" is shown', () => expect(page.getByRole('heading', { name: 'Confidence Graph', level: 2 })).toBeVisible());
+    await check('The page title "Confidence Graph" is shown', () => expect(locatorOf(page, 'graph.heading.confidence-graph')).toBeVisible());
     await check('The breadcrumb shows "Confidence Graph" and the start of the run id', async () => {
-      const crumb = page.getByRole('navigation', { name: 'Breadcrumb' });
-      await expect(crumb).toContainText(/confidence graph/i);
-      expect(norm(await page.locator('body').innerText())).toMatch(new RegExp(`run\\s*${id.slice(0, 8)}`, 'i'));
+      const crumb = locatorOf(page, 'graph.navigation.breadcrumb');
+      await expect(crumb).toContainText(expectedOf('graph.text.confidence-graph'));
+      expect(norm(await locatorOf(page, 'graph.css.body').innerText())).toMatch(new RegExp(`run\\s*${id.slice(0, 8)}`, 'i'));
     });
-    await check('No error message is shown', () => expect(page.getByText(/something went wrong|failed to load|unable to load|not found/i)).toHaveCount(0));
+    await check('No error message is shown', () => expect(locatorOf(page, 'graph.text.something-went-wrong-failed-to-load')).toHaveCount(0));
   },
 
   'GR-002': async (ctx) => {
     await needGraph(ctx);
     const { page, check, snap } = ctx;
-    const menu = page.getByRole('navigation', { name: 'Workspace' });
+    const menu = locatorOf(page, 'graph.navigation.workspace');
     await snap('Left menu of the Confidence Graph page', menu);
     for (const [name, href] of [['Dashboard', '/dashboard'], ['Confidence Engine', '/confidence-engine'], ['Execution Assistant', '/execution-assistant'], ['Account and Plan', '/account']] as const) {
       await check(`Left menu link "${name}" is shown and goes to ${href}`, async () => {
@@ -108,9 +110,9 @@ export const graphSteps: Record<string, CaseHandler<RepoPage>> = {
         await expect(link).toHaveAttribute('href', new RegExp(href));
       });
     }
-    await check('"Confidence Engine" is the current page in the left menu (aria-current)', () => expect(menu.getByRole('link', { name: /^\s*Confidence Engine\s*$/i }).first()).toHaveAttribute('aria-current', 'page'));
+    await check('"Confidence Engine" is the current page in the left menu (aria-current)', () => expect(locatorOf(menu, 'graph.link.confidence-engine').first()).toHaveAttribute('aria-current', expectedOf('graph.attr.page')));
     await check('The executions meter ("Executions: used / limit") is shown, links to /account and used is not above the limit', async () => {
-      const meter = page.locator('a[href="/account"]').filter({ hasText: /Executions:\s*\d+\s*\/\s*\d+/ }).first();
+      const meter = locatorOf(page, 'graph.css.a-href-account').filter({ hasText: /Executions:\s*\d+\s*\/\s*\d+/ }).first();
       await expect(meter).toBeVisible();
       const m = norm(await meter.innerText()).match(/Executions:\s*(\d+)\s*\/\s*(\d+)/)!;
       expect(num(m[1])).toBeLessThanOrEqual(num(m[2]));
@@ -125,32 +127,32 @@ export const graphSteps: Record<string, CaseHandler<RepoPage>> = {
     }
     await check('"Closed-Loop Intel" is marked COMING SOON', () => expect(comingSoonCard(page).first()).toBeVisible());
     await check('The header shows the start of the run id ("run fc4e0e16…") and the branch picker shows the branch with the commit (7 hex)', async () => {
-      const t = norm(await page.locator('body').innerText());
+      const t = norm(await locatorOf(page, 'graph.css.body').innerText());
       expect(t, 'run id start in the header').toMatch(new RegExp(`run\\s*${runId(page).slice(0, 8)}`, 'i'));
       expect(t, 'branch · commit in the branch picker').toMatch(/\S+\s*·\s*[0-9a-f]{7}\b/i);
-    }, [page.getByText(/^\s*run\s+[0-9a-f]{6,}/i).first(), page.getByRole('button', { name: /·\s*[0-9a-f]{7}/i }).first()]);
+    }, [locatorOf(page, 'graph.text.run-0-9a-f-6').first(), locatorOf(page, 'graph.button.0-9a-f-7').first()]);
   },
 
   'GR-003': async (ctx) => {
     await needGraph(ctx);
     const { page, check, note, snap } = ctx;
-    const box = page.getByRole('textbox', { name: 'Ask a confidence question' });
+    const box = locatorOf(page, 'graph.textbox.ask-a-confidence-question');
     await snap('The question box "Ask a confidence question"', box);
     await check('The question box "Ask a confidence question" is shown with its hint', async () => {
       await expect(box).toBeVisible();
-      await expect(box).toHaveAttribute('placeholder', /ask a confidence question/i);
+      await expect(box).toHaveAttribute('placeholder', expectedOf('graph.attr.ask-a-confidence-question'));
     });
     await check('The question box can be typed in', () => expect(box).toBeEditable());
     await check('Typed text stays in the box and can be cleared', async () => {
       await box.fill('draft only - not sent');
-      await expect(box).toHaveValue('draft only - not sent');
+      await expect(box).toHaveValue(expectedOf('graph.value.draft-only-not-sent'));
       await box.fill('');
       await expect(box).toHaveValue('');
     });
-    await check('The "Submit question" button is shown', () => expect(page.getByRole('button', { name: 'Submit question' })).toBeVisible());
-    await check('The chat thread of the run is still shown on the left (it says the run is complete)', () => anyShown(page.getByText(/run (is )?complete/i)));
+    await check('The "Submit question" button is shown', () => expect(locatorOf(page, 'graph.button.submit-question')).toBeVisible());
+    await check('The chat thread of the run is still shown on the left (it says the run is complete)', () => anyShown(locatorOf(page, 'graph.text.run-is-complete')));
     await check('The "Branch run" selector is shown with this run', async () => {
-      const s = page.getByRole('combobox', { name: 'Branch run' });
+      const s = locatorOf(page, 'graph.combobox.branch-run');
       await expect(s).toBeVisible();
       await expect(s).toContainText(new RegExp(esc(runId(page).slice(0, 8)), 'i'));
     });
@@ -160,13 +162,13 @@ export const graphSteps: Record<string, CaseHandler<RepoPage>> = {
   'GR-004': async (ctx) => {
     await needGraph(ctx);
     const { page, check, note } = ctx;
-    const btn = page.getByRole('button', { name: 'Run Analysis' });
+    const btn = locatorOf(page, 'graph.button.run-analysis');
     await ctx.snap('The "Run Analysis" button next to the page title', btn);
     await check('The "Run Analysis" button is shown', () => expect(btn).toBeVisible());
     await check('The "Run Analysis" button is enabled', () => expect(btn).toBeEnabled());
-    await check('Its tooltip (title) says what it does ("Refresh run metrics")', () => expect(btn).toHaveAttribute('title', /Refresh run metrics/i));
+    await check('Its tooltip (title) says what it does ("Refresh run metrics")', () => expect(btn).toHaveAttribute('title', expectedOf('graph.attr.refresh-run-metrics')));
     await check('The "Run Analysis" button sits next to the page title "Confidence Graph"', async () => {
-      const head = page.getByRole('heading', { name: 'Confidence Graph', level: 2 });
+      const head = locatorOf(page, 'graph.heading.confidence-graph');
       await expect(head).toBeVisible();
       const [h, b] = [await head.boundingBox(), await btn.boundingBox()];
       expect(h && b && Math.abs(h.y - b.y) < 80, 'the button is not next to the section title').toBe(true);
@@ -179,13 +181,13 @@ export const graphSteps: Record<string, CaseHandler<RepoPage>> = {
     const { page, check, note } = ctx;
     const { mine, branchRuns: list } = await branchRuns(page);
     const scored = list.filter((r) => r.overall_score !== null);
-    await check('"Confidence Trend" is shown', () => anyShown(page.getByText(/^\s*Confidence Trend\s*$/i)));
-    const count = page.getByText(/\d+\s+runs?\s+with\s+scores?/i).first();
+    await check('"Confidence Trend" is shown', () => anyShown(locatorOf(page, 'graph.text.confidence-trend')));
+    const count = locatorOf(page, 'graph.text.runs-with-scores').first();
     await ctx.snap('Confidence Trend header with the Org / WB / BB figures', count);
     await check('The line "Last N runs with scores" is shown', () => expect(count).toBeVisible());
     await check('N equals the number of runs of this branch that have a score (run API)', async () =>
       expect(num((await count.innerText()).match(/(\d+)\s+runs?/i)?.[1]), 'N in "Last N runs with scores"').toBe(scored.length));
-    const text = norm(await page.locator('body').innerText());
+    const text = norm(await locatorOf(page, 'graph.css.body').innerText());
     // "<change> <Org> Org <WB> WB <BB> BB", e.g. "+10 pts 85 Org 85 WB N/A BB"; the change figure is optional text before the Org figure
     const m = text.match(/runs?\s+with\s+scores?\s+(?:(.*?)\s+)?(\S+)\s+Org\s+(\S+)\s+WB\s+(\S+)\s+BB/i);
     await check('The three figures "Org", "WB" and "BB" are shown', () => expect(m).not.toBeNull());
@@ -215,8 +217,8 @@ export const graphSteps: Record<string, CaseHandler<RepoPage>> = {
       });
       (best as Element | null)?.setAttribute('data-e2e-chart', '1');
     });
-    const chart = page.locator('svg[data-e2e-chart="1"]');
-    const card = chart.locator('xpath=ancestor::*[contains(., "Confidence Trend")][1]');
+    const chart = locatorOf(page, 'graph.css.svg-data-e2e-chart-1');
+    const card = locatorOf(chart, 'graph.css.xpath-ancestor-contains-confidence-t');
     await check('The trend chart is shown', () => expect(chart).toBeVisible());
     await ctx.snap('The Confidence Trend chart card', card);
     const facts = await chart.evaluate((sv) => {
@@ -240,21 +242,21 @@ export const graphSteps: Record<string, CaseHandler<RepoPage>> = {
     });
     await check('Every point sits inside the chart area', async () => {
       const box = await chart.boundingBox();
-      for (const c of await chart.locator('circle').all()) {
+      for (const c of await locatorOf(chart, 'graph.css.circle').all()) {
         const b = await c.boundingBox();
         if (!b || b.width < 5) continue;
         const [cx, cy] = [b.x + b.width / 2, b.y + b.height / 2];   // the centre of the point (its edge ring may touch the border)
         expect(box && cx >= box.x - 2 && cx <= box.x + box.width + 2 && cy >= box.y - 2 && cy <= box.y + box.height + 2, 'a point is outside the chart').toBe(true);
       }
     });
-    await check('The rating label under the chart ("Hold", "Pass" etc.) is shown', () => anyShown(page.getByText(/^\s*(Hold|Pass|Fail|Go|No-?Go|Ship|Block)\s*$/i)));
+    await check('The rating label under the chart ("Hold", "Pass" etc.) is shown', () => anyShown(locatorOf(page, 'graph.text.hold-pass-fail-go-no-go-ship-block')));
     note(`${scored.length} scored run(s) on this branch: ${scored.map((r) => `#${r.commit_sha.slice(0, 7)}=${r.overall_score}`).join(', ')}`);
   },
 
   'GR-007': async (ctx) => {
     await needGraph(ctx);
     const { page, check, note } = ctx;
-    const report = page.getByRole('button', { name: 'Download taxonomy report' });
+    const report = locatorOf(page, 'graph.button.download-taxonomy-report');
     await ctx.snap('The "Download taxonomy report" button', report);
     await check('"Download taxonomy report" is shown', () => expect(report).toBeVisible(), report);
     await check('"Download taxonomy report" is enabled', () => expect(report).toBeEnabled(), report);
@@ -280,7 +282,7 @@ export const graphSteps: Record<string, CaseHandler<RepoPage>> = {
     await check('The CONFIDENCE step shows a percentage and a rating word', () => expect(conf).not.toBeNull());
     if (conf && mine?.overall_score != null) await check('The percentage equals the run score (rounded)', () => expect(Math.abs(num(conf[1]) - mine.overall_score!)).toBeLessThanOrEqual(1));
     if (mine) {
-      const failedNote = page.getByText(/pipeline run failed/i);
+      const failedNote = locatorOf(page, 'graph.text.pipeline-run-failed');
       await check('The "Pipeline run failed" note is shown exactly when the runs list says the run status is "failed"', async () =>
         expect((await failedNote.count()) > 0).toBe(mine.status === 'failed'));
       note(`Run status in the runs list: ${mine.status}, phase: ${mine.phase}`);
@@ -290,7 +292,7 @@ export const graphSteps: Record<string, CaseHandler<RepoPage>> = {
   'GR-009': async (ctx) => {
     await needGraph(ctx);
     const { page, check, note } = ctx;
-    const label = page.getByText(/Page\s+\d+\s+of\s+\d+\s*·?\s*whitebox pipeline/i).first();
+    const label = locatorOf(page, 'graph.text.page-of-whitebox-pipeline').first();
     const p = pagerOf(label);
     await ctx.snap('The whitebox pipeline pager', label);
     await check('"Page N of M · whitebox pipeline" is shown', () => expect(label).toBeVisible());
@@ -299,9 +301,9 @@ export const graphSteps: Record<string, CaseHandler<RepoPage>> = {
     await check('"Previous" is disabled on the first page', async () => { if (num(m?.[1]) <= 1) await expect(p.prev.first()).toBeDisabled(); });
     await check('"Next" is disabled when there is only one page', async () => { if (num(m?.[2]) <= 1) await expect(p.next.first()).toBeDisabled(); });
     // only the buttons of THIS pager (the one under the whitebox pipeline), not the run-history pager further down
-    const box = label.locator('xpath=ancestor::*[.//button[normalize-space()="1"]][1]');
-    await check('The button for page 1 is enabled', () => expect(box.getByRole('button', { name: /^1$/ }).first()).toBeEnabled());
-    const numbers = (await box.getByRole('button', { name: /^\d+$/ }).evaluateAll((els) => els.map((e) => e.textContent))).length;
+    const box = locatorOf(label, 'graph.css.xpath-ancestor-button-normalize-spac-2');
+    await check('The button for page 1 is enabled', () => expect(locatorOf(box, 'graph.button.1').first()).toBeEnabled());
+    const numbers = (await locatorOf(box, 'graph.button.item').evaluateAll((els) => els.map((e) => e.textContent))).length;
     await check('The pager does not list more pages than there are', () => expect(numbers, `${numbers} page buttons for ${m?.[2]} page(s)`).toBeLessThanOrEqual(Math.max(num(m?.[2]), 1)), box);
     note(`Pager: page ${m?.[1]} of ${m?.[2]}`);
   },
@@ -311,10 +313,10 @@ export const graphSteps: Record<string, CaseHandler<RepoPage>> = {
     const { page, check, note } = ctx;
     const { branchRuns: list } = await branchRuns(page);
     await ctx.snap('The Pipeline Run History table', historyTable(page));
-    await check('"Pipeline Run History" is shown', () => anyShown(page.getByText(/^\s*Pipeline Run History\s*$/i)));
-    note(`The "N recent executions" line on the page reads: ${norm(await page.getByText(/\d+\s+recent\s+executions?/i).first().innerText().catch(() => '(not found)'))}; the runs list API has ${list.length} run(s) on this branch.`);
+    await check('"Pipeline Run History" is shown', () => anyShown(locatorOf(page, 'graph.text.pipeline-run-history')));
+    note(`The "N recent executions" line on the page reads: ${norm(await locatorOf(page, 'graph.text.recent-executions').first().innerText().catch(() => '(not found)'))}; the runs list API has ${list.length} run(s) on this branch.`);
     await check('The table has the columns Run ID, Trigger, Story, Time, Duration, Status and Score', async () => {
-      const heads = (await historyTable(page).locator('thead th').allInnerTexts()).map((h) => norm(h).toLowerCase());
+      const heads = (await locatorOf(historyTable(page), 'graph.css.thead-th').allInnerTexts()).map((h) => norm(h).toLowerCase());
       for (const c of ['Run ID', 'Trigger', 'Story', 'Time', 'Duration', 'Status', 'Score']) expect(heads.some((h) => h.includes(c.toLowerCase())), `column ${c} (columns: ${heads.join(', ')})`).toBe(true);
     });
     const rows = runRows(page);
@@ -326,36 +328,36 @@ export const graphSteps: Record<string, CaseHandler<RepoPage>> = {
     for (const r of list.slice(0, 10)) {
       const row = rows.filter({ hasText: r.run_id.slice(0, 8) }).first();
       const label = `Run ${r.run_id.slice(0, 8)}`;
-      await check(`${label}: the row is shown with a shortened id ending in "…"`, async () => { await expect(row).toBeVisible(); await expect(row.locator('td').nth(0)).toContainText(/…|\.\.\./); }, row);
+      await check(`${label}: the row is shown with a shortened id ending in "…"`, async () => { await expect(row).toBeVisible(); await expect(locatorOf(row, 'graph.css.td').nth(0)).toContainText(/…|\.\.\./); }, row);
       await check(`${label}: Trigger is "${r.trigger_type}"`, async () => {
-        const got = (await row.locator('td').nth(1).innerText()).toLowerCase().replace(/[^a-z0-9]/g, '');
+        const got = (await locatorOf(row, 'graph.css.td').nth(1).innerText()).toLowerCase().replace(/[^a-z0-9]/g, '');
         expect(got, 'Trigger cell').toContain(r.trigger_type.toLowerCase().replace(/[^a-z0-9]/g, ''));
-      }, row.locator('td').nth(1));
+      }, locatorOf(row, 'graph.css.td').nth(1));
       await check(`${label}: Time is the start time (HH:MM)`, async () => {
         const want = [await clock(page, r.started_at), await clock(page, r.created_at)];
-        const got = norm(await row.locator('td').nth(3).innerText());
+        const got = norm(await locatorOf(row, 'graph.css.td').nth(3).innerText());
         expect(want.some((w) => got.includes(w)), `shows ${got}, expected one of ${want.join(' / ')}`).toBe(true);
-      }, row.locator('td').nth(3));
+      }, locatorOf(row, 'graph.css.td').nth(3));
       await check(`${label}: Duration is shown (not "—")`, async () => {
-        const got = norm(await row.locator('td').nth(4).innerText());
+        const got = norm(await locatorOf(row, 'graph.css.td').nth(4).innerText());
         expect(got, 'Duration column is empty').not.toMatch(/^(—|–|-|)$/);
-      }, row.locator('td').nth(4));
+      }, locatorOf(row, 'graph.css.td').nth(4));
       await check(`${label}: Duration is about the ${r.duration_seconds ?? '?'} s in the run API`, async () => {
-        const got = norm(await row.locator('td').nth(4).innerText());
+        const got = norm(await locatorOf(row, 'graph.css.td').nth(4).innerText());
         expect(Math.abs(seconds(got) - (r.duration_seconds ?? 0)), `shows "${got}"`).toBeLessThanOrEqual(60);
-      }, row.locator('td').nth(4));
-      await check(`${label}: Status shows a rating word`, () => expect(row.locator('td').nth(5)).toHaveText(/\S/), row.locator('td').nth(5));
+      }, locatorOf(row, 'graph.css.td').nth(4));
+      await check(`${label}: Status shows a rating word`, () => expect(locatorOf(row, 'graph.css.td').nth(5)).toHaveText(/\S/), locatorOf(row, 'graph.css.td').nth(5));
       if (r.overall_score !== null) await check(`${label}: Score is ${Math.round(r.overall_score)} (the runs list says ${r.overall_score})`, async () =>
-        expect(Math.abs(num(await row.locator('td').nth(6).innerText()) - r.overall_score!)).toBeLessThanOrEqual(1), row.locator('td').nth(6));
+        expect(Math.abs(num(await locatorOf(row, 'graph.css.td').nth(6).innerText()) - r.overall_score!)).toBeLessThanOrEqual(1), locatorOf(row, 'graph.css.td').nth(6));
     }
-    note(`${list.length} run(s) on this branch in the API; Story column shows: ${(await rows.first().locator('td').nth(2).innerText().catch(() => '')).trim() || '(empty)'}`);
+    note(`${list.length} run(s) on this branch in the API; Story column shows: ${(await locatorOf(rows.first(), 'graph.css.td').nth(2).innerText().catch(() => '')).trim() || '(empty)'}`);
   },
 
   'GR-011': async (ctx) => {
     await needGraph(ctx);
     const { page, check, note } = ctx;
     const { branchRuns: list } = await branchRuns(page);
-    const label = page.getByText(/Page\s+\d+\s+of\s+\d+\s*·?\s*\d+\s+runs?/i).first();
+    const label = locatorOf(page, 'graph.text.page-of-runs').first();
     const p = pagerOf(label);
     await ctx.snap('The run history pager under the table', label);
     await check('"Page N of M · X run(s)" is shown under the table', () => expect(label).toBeVisible());
@@ -370,7 +372,7 @@ export const graphSteps: Record<string, CaseHandler<RepoPage>> = {
   'GR-012': async (ctx) => {
     await needGraph(ctx);
     const { page, check, note } = ctx;
-    const box = page.getByPlaceholder('Search by story ID…');
+    const box = locatorOf(page, 'graph.placeholder.search-by-story-id');
     await check('The box "Search by story ID…" is shown', () => expect(box).toBeVisible(), box);
     // many pages keep a search box read-only until it is clicked (to stop the browser auto-filling it), so click it first - and again while it loads
     for (let i = 0; i < 5 && !(await box.isEditable().catch(() => false)); i++) { await box.click({ timeout: 3_000 }).catch(() => undefined); await page.waitForTimeout(1_500); }
@@ -420,7 +422,7 @@ export const graphSteps: Record<string, CaseHandler<RepoPage>> = {
     const { mine, status } = await branchRuns(page);
     const tenant = await tenantOf(page);
     const rt = await apiGet(page, `/runtime-api/v1/runs/${id}`);
-    await ctx.snap('Confidence Graph page of the run checked against the APIs', page.getByRole('heading', { name: 'Confidence Graph', level: 2 }));
+    await ctx.snap('Confidence Graph page of the run checked against the APIs', locatorOf(page, 'graph.heading.confidence-graph'));
     await check('The runs list API answers (200)', () => expect(status).toBe(200));
     await check('The run API answers (200) for this run', () => expect(rt.status).toBe(200));
     await check('This run is in the runs list', () => expect(mine).toBeDefined());
@@ -459,7 +461,7 @@ export const graphSteps: Record<string, CaseHandler<RepoPage>> = {
     await check('The page does not call the data APIs more than 60 times in 30 seconds', () => expect(total).toBeLessThanOrEqual(60));
     await ctx.snap('The page still showing its title and run history after 30 seconds', historyTable(page));
     await check('The page still shows its data after the calls (title and table)', async () => {
-      await expect(page.getByRole('heading', { name: 'Confidence Graph', level: 2 })).toBeVisible();
+      await expect(locatorOf(page, 'graph.heading.confidence-graph')).toBeVisible();
       await expect(runRows(page).first()).toBeVisible();
     });
   },
@@ -468,11 +470,11 @@ export const graphSteps: Record<string, CaseHandler<RepoPage>> = {
     await needGraph(ctx);
     const { page, check } = ctx;
     const id = runId(page);
-    const about = page.getByRole('button', { name: 'About Confidence Graph' });
+    const about = locatorOf(page, 'graph.button.about-confidence-graph');
     await check('"About Confidence Graph" is shown', () => expect(about).toBeVisible());
     await about.hover().catch(() => undefined);
     await check('"About Confidence Graph" shows an explanation text when pointed at', async () => {
-      const tips = page.locator('[role="tooltip"], [data-slot="tooltip-content"], [data-radix-popper-content-wrapper], [role="dialog"], [role="status"]');
+      const tips = locatorOf(page, 'graph.css.role-tooltip-data-slot-tooltip-conte');
       const title = norm((await about.getAttribute('title').catch(() => '')) ?? '');
       await expect.poll(async () => {
         if (title.length > 10) return true;   // a plain browser tooltip (title attribute) is an explanation text too
@@ -482,7 +484,7 @@ export const graphSteps: Record<string, CaseHandler<RepoPage>> = {
     });
     await ctx.snap('"About Confidence Graph" pointed at, explanation shown', about);
     await page.mouse.move(0, 0);
-    const back = page.getByRole('link', { name: 'Back to Confidence Engine' });
+    const back = locatorOf(page, 'graph.link.back-to-confidence-engine');
     await check('"Back to Confidence Engine" is shown and goes to the engine page of this run', async () => {
       await expect(back).toBeVisible();
       await expect(back).toHaveAttribute('href', new RegExp(`runId=${id}.*pillar=engine|pillar=engine.*runId=${id}`));
@@ -492,10 +494,10 @@ export const graphSteps: Record<string, CaseHandler<RepoPage>> = {
       await page.waitForURL(/pillar=engine/, { timeout: 20_000 });
     });
     await check('The Confidence Engine page is shown again for the same run', async () => {
-      await anyShown(page.getByText(/^\s*PR Confidence Analysis\s*$/i), 30_000);
+      await anyShown(locatorOf(page, 'graph.text.pr-confidence-analysis'), 30_000);
       expect(runId(page)).toBe(id);
     });
-    await check('The scores are still there after coming back', () => anyShown(page.getByText(/^\s*Confidence Score\s*$/i), 20_000));
+    await check('The scores are still there after coming back', () => anyShown(locatorOf(page, 'graph.text.confidence-score'), 20_000));
   },
 
   'GR-016': async (ctx) => {
@@ -505,14 +507,14 @@ export const graphSteps: Record<string, CaseHandler<RepoPage>> = {
     // the Input sheet may hold "owner/name", a URL or "name.git": the page shows the plain repository name
     const repoName = repo.trim().replace(/\/+$/, '').replace(/\.git$/i, '').split(/[\/:]/).pop() ?? repo;
     const bodyHas = (re: RegExp): Promise<void> =>
-      expect.poll(async () => norm(await page.locator('body').innerText()), { timeout: 10_000 }).toMatch(re);
+      expect.poll(async () => norm(await locatorOf(page, 'graph.css.body').innerText()), { timeout: 10_000 }).toMatch(re);
     await check('The address has pillar=graph', () => expect(new URL(page.url()).searchParams.get('pillar')).toBe('graph'));
     await check(`The graph is for the repository "${repoName}" (its name is shown with the trend)`, () => bodyHas(new RegExp(esc(repoName), 'i')));
     await check('A result word (Pass / Hold / Block / Fail) is shown with the trend', () => bodyHas(/\b(Pass|Hold|Block|Fail)\b/i));
     await check('The scope "Latest release version" is shown', () => bodyHas(/Latest release version/i));
     await check('The period "Last 30 days" is shown', () => bodyHas(/Last 30 days/i));
-    await ctx.snap('Graph header with repository, result word, scope and period', page.getByText(/Last 30 days/i).first());
-    const bodyNow = norm(await page.locator('body').innerText());
+    await ctx.snap('Graph header with repository, result word, scope and period', locatorOf(page, 'graph.text.last-30-days').first());
+    const bodyNow = norm(await locatorOf(page, 'graph.css.body').innerText());
     const epics = /All Epics/i.test(bodyNow) ? 1 : 0;
     const stories = /All Stories/i.test(bodyNow) ? 1 : 0;
     note(`The QA sheet (step 43.1) expects "All Epics" and "All Stories" filters on this page: "All Epics" ${epics ? 'is shown' : 'is NOT on the page'}, "All Stories" ${stories ? 'is shown' : 'is NOT on the page'}.`);

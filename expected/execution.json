@@ -1,0 +1,5 @@
+{
+  "execution.text.1-branch": {"regex":"\\d+\\s*\\/\\s*1\\s+branch","flags":"i"},
+  "execution.text.execution-status": {"regex":"Execution status\\s*:?\\s*\\S+","flags":"i"},
+  "execution.text.weight": {"regex":"\\d+\\s*%\\s*weight","flags":"i"}
+}

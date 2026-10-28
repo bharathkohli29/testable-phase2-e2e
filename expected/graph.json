@@ -1,0 +1,7 @@
+{
+  "graph.text.confidence-graph": {"regex":"confidence graph","flags":"i"},
+  "graph.attr.page": {"text":"page"},
+  "graph.attr.ask-a-confidence-question": {"regex":"ask a confidence question","flags":"i"},
+  "graph.value.draft-only-not-sent": {"text":"draft only - not sent"},
+  "graph.attr.refresh-run-metrics": {"regex":"Refresh run metrics","flags":"i"}
+}

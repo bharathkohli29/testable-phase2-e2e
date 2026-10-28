@@ -2,7 +2,9 @@ import { expect, Locator, Page } from '@playwright/test';
 import { AppShell } from '../../../core/pages/AppShell';
 import { BlockingFailure } from '../../../core/runner/checks';
 import { waitMs } from '../../../core/settings';
+import { obj as locatorOf } from '../../../core/keywords/obj';
 
+import { expected as expectedOf } from '../../../core/keywords/expected';
 export const HOME_PATH = '/execution-assistant';
 export const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 /** Whole-text match that ignores upper / lower case (the site styles some labels with CSS, and case is not what we test). */
@@ -80,41 +82,41 @@ export class RepoPage {
     this.baseUrl = baseUrl;
     this.app = new AppShell(page, baseUrl);
 
-    this.changeRepo = page.getByRole('button', { name: ci('Change repository / branch') });
-    this.scmConnected = page.getByText(/GitHub connected/i).first();
-    this.chatBox = page.getByPlaceholder(/Ask anything/i);
+    this.changeRepo = locatorOf(page, 'repo.button.change-repository-branch');
+    this.scmConnected = locatorOf(page, 'repo.text.github-connected').first();
+    this.chatBox = locatorOf(page, 'repo.placeholder.ask-anything');
 
-    this.dialog = page.getByRole('dialog');
-    this.connectImport = this.dialog.getByRole('button', { name: ci('Connect / Import repository') });
-    this.dialogContinue = this.dialog.getByRole('button', { name: ci('Continue') });
+    this.dialog = locatorOf(page, 'repo.dialog.item');
+    this.connectImport = locatorOf(this.dialog, 'repo.button.connect-import-repository');
+    this.dialogContinue = locatorOf(this.dialog, 'repo.button.continue');
 
-    this.syncProgress = page.getByText(/Syncing GitHub repositories/i).first();
-    this.syncedMessage = page.getByText(/Synced \d+ repositories from/i).first();
-    this.syncFailed = page.getByText(/Repository sync failed|couldn.t reach source control|Testable service issue/i).last();
-    this.scmCard = page.getByText(ci('Organization')).last();
-    this.inlineSearch = page.getByPlaceholder(/Search all repositories/i).last(); // every sync / "Choose another" adds another table
-    this.viewAll = page.getByRole('button', { name: /^View all \d+ repositories$/ }).last();
+    this.syncProgress = locatorOf(page, 'repo.text.syncing-github-repositories').first();
+    this.syncedMessage = locatorOf(page, 'repo.text.synced-repositories-from').first();
+    this.syncFailed = locatorOf(page, 'repo.text.repository-sync-failed-couldn-t-reac').last();
+    this.scmCard = locatorOf(page, 'repo.text.organization').last();
+    this.inlineSearch = locatorOf(page, 'repo.placeholder.search-all-repositories').last(); // every sync / "Choose another" adds another table
+    this.viewAll = locatorOf(page, 'repo.button.view-all-repositories').last();
 
-    this.repoDialog = page.getByRole('dialog').filter({ hasText: /Choose a repository/i });
-    this.repoSearch = this.repoDialog.getByPlaceholder(/Search repositories/i);
-    this.repoList = this.repoDialog.getByRole('list', { name: /All repositories/i });
+    this.repoDialog = locatorOf(page, 'repo.dialog.item').filter({ hasText: /Choose a repository/i });
+    this.repoSearch = locatorOf(this.repoDialog, 'repo.placeholder.search-repositories');
+    this.repoList = locatorOf(this.repoDialog, 'repo.list.all-repositories');
 
-    this.confirmRepo = page.getByRole('button', { name: ci('Confirm repository') }).last();
-    this.chooseAnother = page.getByRole('button', { name: ci('Choose another') }).last();
-    this.chips = page.getByRole('radio');
-    this.moreBranches = page.getByRole('button', { name: /^\+\d+ branches?$/ }).last();
-    this.onPush = page.getByRole('button', { name: ci('On push') }).last();
-    this.onPrMerge = page.getByRole('button', { name: ci('On PR merge') }).last();
-    this.summaryCard = page.getByText(/Branches\s*&\s*triggers/i).last();
+    this.confirmRepo = locatorOf(page, 'repo.button.confirm-repository').last();
+    this.chooseAnother = locatorOf(page, 'repo.button.choose-another').last();
+    this.chips = locatorOf(page, 'repo.radio.item');
+    this.moreBranches = locatorOf(page, 'repo.button.branches').last();
+    this.onPush = locatorOf(page, 'repo.button.on-push').last();
+    this.onPrMerge = locatorOf(page, 'repo.button.on-pr-merge').last();
+    this.summaryCard = locatorOf(page, 'repo.text.branches-triggers').last();
 
-    this.branchDialog = page.getByRole('dialog').filter({ hasText: /Choose a branch/i });
-    this.branchSearch = this.branchDialog.getByPlaceholder(/Search branches/i);
-    this.branchDone = this.branchDialog.getByRole('button', { name: ci('Done') });
+    this.branchDialog = locatorOf(page, 'repo.dialog.item').filter({ hasText: /Choose a branch/i });
+    this.branchSearch = locatorOf(this.branchDialog, 'repo.placeholder.search-branches');
+    this.branchDone = locatorOf(this.branchDialog, 'repo.button.done');
 
-    this.reviewBranches = page.getByText(/review branches/i).last();
-    this.cannotChange = page.getByText(/repository cannot be changed/i).last(); // "...while a run is active" (checked live)
-    this.continueBtn = page.getByRole('button', { name: ci('Continue') }).last();
-    this.blocked = page.getByText(/Analysis is blocked on/i).last();
+    this.reviewBranches = locatorOf(page, 'repo.text.review-branches').last();
+    this.cannotChange = locatorOf(page, 'repo.text.repository-cannot-be-changed').last(); // "...while a run is active" (checked live)
+    this.continueBtn = locatorOf(page, 'repo.button.continue').last();
+    this.blocked = locatorOf(page, 'repo.text.analysis-is-blocked-on').last();
   }
 
   // ───────────── navigation ─────────────
@@ -137,7 +139,7 @@ export class RepoPage {
         return;
       } catch (e) {
         last = (e as Error).message.split('\n')[0];
-        const temporary = await this.page.getByText(/unable to sign you in right now|try again in a few moments/i).first().isVisible().catch(() => false);
+        const temporary = await locatorOf(this.page, 'repo.text.unable-to-sign-you-in-right-now-try').first().isVisible().catch(() => false);
         if (!temporary || n === attempts) break;
         await this.page.waitForTimeout(15_000 * n);
       }
@@ -188,12 +190,12 @@ export class RepoPage {
   /** Closes any dialog that is open (Escape, then its Close / Done button). Used between the steps of the flow. */
   async closeDialogs(): Promise<void> {
     for (let i = 0; i < 3; i++) {
-      const dialog = this.page.getByRole('dialog').first();
+      const dialog = locatorOf(this.page, 'repo.dialog.item').first();
       if (!(await dialog.isVisible().catch(() => false))) return;
       await this.page.keyboard.press('Escape');
       await this.page.waitForTimeout(400);
       if (!(await dialog.isVisible().catch(() => false))) return;
-      await dialog.getByRole('button', { name: /^(Close|Done)$/i }).first().click({ timeout: 3_000 }).catch(() => undefined);
+      await locatorOf(dialog, 'repo.button.close-done').first().click({ timeout: 3_000 }).catch(() => undefined);
       await this.page.waitForTimeout(400);
     }
   }
@@ -235,12 +237,12 @@ export class RepoPage {
 
   /** Value next to a label of the GitHub card (Provider / Organization / Repositories / Status). The labels are capitalised by CSS only. */
   scmValue(label: string): Locator {
-    return this.page.getByText(ci(label)).last().locator('xpath=following-sibling::*[1]');
+    return locatorOf(this.page.getByText(ci(label)).last(), 'repo.css.xpath-following-sibling-1');
   }
 
   /** Value next to a label of the "Branches & triggers" summary (Repository / Default branch / Branches available). */
   summaryValue(label: string): Locator {
-    return this.page.getByText(ci(label)).last().locator('xpath=following-sibling::*[1]');
+    return locatorOf(this.page.getByText(ci(label)).last(), 'repo.css.xpath-following-sibling-1');
   }
 
   // ───────────── branches ─────────────
@@ -320,8 +322,8 @@ export class RepoPage {
       throw new BlockingFailure('confirm', `The site refused to confirm: "${msg}". A run is active on this account - wait until it finishes (or use another account) and run again.`);
     }
     // say what the page showed instead, so the reason is visible in the Actual Result (and show the end of the chat in the picture)
-    const tail = (await this.page.locator('body').innerText().catch(() => '')).replace(/\s+/g, ' ').trim();
-    const alerts = (await this.page.locator('[role="alert"], [role="status"], [data-sonner-toast], [class*="toast" i]').allInnerTexts().catch(() => [])).map((t) => t.replace(/\s+/g, ' ').trim()).filter(Boolean).join(' | ');
+    const tail = (await locatorOf(this.page, 'repo.css.body').innerText().catch(() => '')).replace(/\s+/g, ' ').trim();
+    const alerts = (await locatorOf(this.page, 'repo.css.role-alert-role-status-data-sonner-t').allInnerTexts().catch(() => [])).map((t) => t.replace(/\s+/g, ' ').trim()).filter(Boolean).join(' | ');
     await this.confirmRepo.scrollIntoViewIfNeeded().catch(() => undefined);
     const cards = await this.confirmRepo.count().catch(() => 0);
     throw new BlockingFailure('confirm', `"Review branches" did not appear within ${timeoutMs / 1000}s after Confirm repository. Notices on the page: ${alerts || '(none)'}. "Confirm repository" buttons still on the page: ${cards}. The page text ends with: "${tail.slice(-450)}"`);
@@ -330,14 +332,14 @@ export class RepoPage {
   async ensurePrMergeTicked(): Promise<void> {
     await this.onPrMerge.scrollIntoViewIfNeeded();
     if ((await this.onPrMerge.getAttribute('aria-pressed')) !== 'true') await this.onPrMerge.click();
-    await expect(this.onPrMerge).toHaveAttribute('aria-pressed', 'true');
+    await expect(this.onPrMerge).toHaveAttribute('aria-pressed', expectedOf('repo.attr.true'));
   }
 
   async waitForContinueEnabled(minutes: number): Promise<void> {
     const end = Date.now() + minutes * 60_000;
     while (Date.now() < end) {
       if (await this.blocked.isVisible().catch(() => false)) {
-        throw new Error(`Site says: ${(await this.blocked.locator('xpath=..').innerText()).replace(/\s+/g, ' ').slice(0, 200)}`);
+        throw new Error(`Site says: ${(await locatorOf(this.blocked, 'repo.css.xpath').innerText()).replace(/\s+/g, ' ').slice(0, 200)}`);
       }
       if (await this.continueBtn.isEnabled().catch(() => false)) return;
       await this.page.mouse.wheel(0, 2000).catch(() => undefined);
@@ -352,11 +354,11 @@ export class RepoPage {
    */
   async continueAndWaitForPlan(timeoutMs = waitMs('PLAN_WAIT_SEC', 180)): Promise<void> {
     await this.continueBtn.click();
-    const plan = this.page.getByText(/^\s*Run plan\s*$/i).last();
-    const failed = this.page.getByText(/Could not build plan|Plan unavailable|couldn't build the White Box run plan/i).last();
+    const plan = locatorOf(this.page, 'repo.text.run-plan').last();
+    const failed = locatorOf(this.page, 'repo.text.could-not-build-plan-plan-unavailabl').last();
     const outcome = await this.waitEvery30s('the Run plan after Continue', { plan, failed }, timeoutMs);
     if (outcome === 'plan') return;
-    const msg = outcome === 'failed' ? (await failed.locator('xpath=..').innerText().catch(() => '')).replace(/\s+/g, ' ').trim().slice(0, 200) : 'the Run plan did not appear';
+    const msg = outcome === 'failed' ? (await locatorOf(failed, 'repo.css.xpath').innerText().catch(() => '')).replace(/\s+/g, ' ').trim().slice(0, 200) : 'the Run plan did not appear';
     throw new BlockingFailure('plan', `Continue did not open the Run plan: ${msg}`);
   }
 }

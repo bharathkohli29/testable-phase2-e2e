@@ -4,6 +4,7 @@ import { BlockingFailure } from '../../../core/runner/checks';
 import { CaseHandler } from '../../../core/runner/registerCases';
 import { inputs } from '../../flow/helpers';
 import { HOME_PATH, RepoPage, ci, esc } from '../shared/RepoPage';
+import { obj as locatorOf } from '../../../core/keywords/obj';
 
 /**
  * Steps 1-3 of the journey: sign in -> Execution Assistant home -> Change repository / branch -> Connect / Import repository ->
@@ -35,10 +36,10 @@ export const connectionSteps: Record<string, CaseHandler<RepoPage>> = {
     const { snap, pg, check } = ctx;
     await ctx.step('"Change repository / branch" can be clicked', () => pg.changeRepo.click());
     await check('A dialog opens', () => expect(pg.dialog).toBeVisible());
-    await check('Dialog title is "Change repository / branch"', () => expect(pg.dialog.getByText(/Change repository\s*\/\s*branch/i).first()).toBeVisible());
-    await check('Step "1. Choose repository" is shown', () => expect(pg.dialog.getByText(/1\.\s*Choose repository/i).first()).toBeVisible());
+    await check('Dialog title is "Change repository / branch"', () => expect(locatorOf(pg.dialog, 'repo.text.change-repository-branch').first()).toBeVisible());
+    await check('Step "1. Choose repository" is shown', () => expect(locatorOf(pg.dialog, 'repo.text.1-choose-repository').first()).toBeVisible());
     await check('Connected repositories are listed with their GitHub URL', () =>
-      expect(pg.dialog.getByText(/https:\/\/github\.com\//i).first()).toBeVisible());
+      expect(locatorOf(pg.dialog, 'repo.text.https-github-com').first()).toBeVisible());
     await check('"Connect / Import repository" is visible and enabled', async () => {
       await expect(pg.connectImport).toBeVisible();
       await expect(pg.connectImport).toBeEnabled();
@@ -70,11 +71,11 @@ export const connectionSteps: Record<string, CaseHandler<RepoPage>> = {
     await check('GitHub card shows an Organization', () => expect(pg.scmValue('Organization')).not.toHaveText(''));
     await check('GitHub card shows the Repositories count', () => expect(pg.scmValue('Repositories')).toHaveText(/^\d+$/));
     await check('GitHub card shows Status = Active', () => expect(pg.scmValue('Status')).toHaveText(ci('Active'))); // upper / lower case does not matter
-    const showing = pg.page.getByText(/Showing \d+ of \d+ repositories/).last();
+    const showing = locatorOf(pg.page, 'repo.text.showing-of-repositories').last();
     await check('The first rows are shown ("Showing 5 of N repositories")', () => expect(showing).toBeVisible());
     await snap('GitHub card with the repository table', pg.scmCard);
     for (const col of ['Repository', 'Visibility', 'Language', 'Recent commit', 'Updated']) {
-      await check(`Table column "${col}" is shown`, () => expect(pg.page.getByText(ci(col)).and(pg.page.locator(':visible')).first()).toBeVisible());
+      await check(`Table column "${col}" is shown`, () => expect(pg.page.getByText(ci(col)).and(locatorOf(pg.page, 'repo.css.visible')).first()).toBeVisible());
     }
     note(`Header: ${(await showing.innerText().catch(() => '')).trim()}`);
   },
@@ -83,13 +84,13 @@ export const connectionSteps: Record<string, CaseHandler<RepoPage>> = {
     const { snap, pg, check } = ctx;
     await check('"View all N repositories" button is shown', () => expect(pg.viewAll).toBeVisible());
     await ctx.step('"View all" opens the dialog', () => pg.openViewAll());
-    await check('"Choose a repository" dialog opens', () => expect(pg.repoDialog.getByText(/Choose a repository/i).first()).toBeVisible());
-    await check('It says "Select one repository from N available."', () => expect(pg.repoDialog.getByText(/Select one repository from\s+\d+\s+available/i).first()).toBeVisible());
+    await check('"Choose a repository" dialog opens', () => expect(locatorOf(pg.repoDialog, 'repo.text.choose-a-repository').first()).toBeVisible());
+    await check('It says "Select one repository from N available."', () => expect(locatorOf(pg.repoDialog, 'repo.text.select-one-repository-from-available').first()).toBeVisible());
     await check('It has a "Search repositories…" box', () => expect(pg.repoSearch).toBeVisible());
-    await check('It lists repositories (list "All repositories")', () => expect(pg.repoList.getByRole('listitem').first()).toBeVisible());
+    await check('It lists repositories (list "All repositories")', () => expect(locatorOf(pg.repoList, 'repo.listitem.item').first()).toBeVisible());
     await check('Each row shows visibility and status (e.g. "Public · — · Discovered")', () =>
-      expect(pg.repoList.getByText(/(Public|Private|Internal)\s*·\s*.+\s*·\s*(Imported|Discovered)/i).first()).toBeVisible());
-    await check('"Done" button is shown', () => expect(pg.repoDialog.getByRole('button', { name: ci('Done') })).toBeVisible());
+      expect(locatorOf(pg.repoList, 'repo.text.public-private-internal-imported-dis').first()).toBeVisible());
+    await check('"Done" button is shown', () => expect(locatorOf(pg.repoDialog, 'repo.button.done')).toBeVisible());
     await snap('"Choose a repository" dialog is open', pg.repoDialog);
   },
 
@@ -102,7 +103,7 @@ export const connectionSteps: Record<string, CaseHandler<RepoPage>> = {
     await check(`Searching "${name}" lists the repository`, () => expect(pg.repoRow(repo).first()).toBeVisible({ timeout: 15_000 }));
     await snap('Repository search result in the dialog', pg.repoDialog);
     await check('Only matching repositories remain in the list', async () => {
-      for (const t of await pg.repoList.getByRole('listitem').allInnerTexts()) expect(t.toLowerCase()).toContain(name.toLowerCase());
+      for (const t of await locatorOf(pg.repoList, 'repo.listitem.item').allInnerTexts()) expect(t.toLowerCase()).toContain(name.toLowerCase());
     });
     note(`Row: ${((await pg.repoRow(repo).first().innerText().catch(() => '')) || '').replace(/\s+/g, ' ').trim()}`);
   },
@@ -112,9 +113,9 @@ export const connectionSteps: Record<string, CaseHandler<RepoPage>> = {
     const fake = data.fake_repo || 'zz-no-such-repo-xyz';
     await pg.openViewAll();
     await pg.repoSearch.fill(fake);
-    await check(`Searching "${fake}" shows "No repositories match …"`, () => expect(pg.repoDialog.getByText(/No repositories match/i).first()).toBeVisible());
+    await check(`Searching "${fake}" shows "No repositories match …"`, () => expect(locatorOf(pg.repoDialog, 'repo.text.no-repositories-match').first()).toBeVisible());
     await check('No repository row is listed', () => expect(pg.repoRow(fake)).toHaveCount(0));
-    await snap('"No repositories match" message', pg.repoDialog.getByText(/No repositories match/i).first());
+    await snap('"No repositories match" message', locatorOf(pg.repoDialog, 'repo.text.no-repositories-match').first());
   },
 
   'REPO-CON-008': async (ctx) => {

@@ -8,7 +8,9 @@ import { apiGet, tenantOf } from '../../core/pages/runApi';
 import { CaseHandler } from '../../core/runner/registerCases';
 import { readDashboardRow, readEngine, readGraph, readObject, same, until } from '../flow/crossScreen';
 import { RepoPage } from '../repo/shared/RepoPage';
+import { obj as locatorOf } from '../../core/keywords/obj';
 
+import { expected as expectedOf } from '../../core/keywords/expected';
 /**
  * The Confidence Engine module: every part of /confidence-engine?pillar=engine once the run has finished.
  * Verified live (C-_Stack / WestCoastFitness-positive). Checks use locators (roles, names, labels, text, table cells) and the run API
@@ -57,13 +59,13 @@ async function needPage(ctx: Parameters<CaseHandler<RepoPage>>[0]): Promise<void
 }
 
 /** The element after a small label (value under "TOTAL", "PASSED" ...). */
-const valueUnder = (page: Page, label: RegExp): Locator => page.locator('p').filter({ hasText: label }).first().locator('xpath=following-sibling::*[1]');
+const valueUnder = (page: Page, label: RegExp): Locator => locatorOf(locatorOf(page, 'confidence.css.p').filter({ hasText: label }).first(), 'confidence.css.xpath-following-sibling-1');
 
-const tabLabel = (page: Page, t: (typeof TABS)[number]): Locator => page.locator('p').filter({ hasText: t.label }).first();
-const categoryBox = (page: Page, t: (typeof TABS)[number]): Locator => tabLabel(page, t).locator('xpath=following-sibling::div[1]');
+const tabLabel = (page: Page, t: (typeof TABS)[number]): Locator => locatorOf(page, 'confidence.css.p').filter({ hasText: t.label }).first();
+const categoryBox = (page: Page, t: (typeof TABS)[number]): Locator => locatorOf(tabLabel(page, t), 'confidence.css.xpath-following-sibling-div-1');
 const gateBox = (page: Page, t: (typeof TABS)[number]): Locator =>
-  tabLabel(page, t).locator('xpath=ancestor::div[contains(@class,"border-b")][1]/following::div[contains(@class,"flex-nowrap") and contains(@class,"items-center")][1]');
-const gateHeading = (page: Page): Locator => page.locator('h3').filter({ hasText: /\sgate\s*$/i }).first();
+  locatorOf(tabLabel(page, t), 'confidence.css.xpath-ancestor-div-contains-class-bo');
+const gateHeading = (page: Page): Locator => locatorOf(page, 'confidence.css.h3').filter({ hasText: /\sgate\s*$/i }).first();
 
 async function openTab(page: Page, t: (typeof TABS)[number]): Promise<void> {
   await page.getByRole('button', { name: t.button, exact: true }).click();
@@ -73,11 +75,11 @@ async function openTab(page: Page, t: (typeof TABS)[number]): Promise<void> {
 /** Names of the category chips plus the ones inside "More (n)". */
 async function listCategories(page: Page, t: (typeof TABS)[number]): Promise<string[]> {
   const box = categoryBox(page, t);
-  const names = (await box.getByRole('button').allInnerTexts()).map(norm).filter((n) => n && !/^More \(\d+\)$/.test(n));
-  const more = box.getByRole('button', { name: /^More \(\d+\)/ });
+  const names = (await locatorOf(box, 'confidence.button.item').allInnerTexts()).map(norm).filter((n) => n && !/^More \(\d+\)$/.test(n));
+  const more = locatorOf(box, 'confidence.button.more');
   if (await more.count()) {
     await more.click();
-    names.push(...(await page.getByRole('menuitem').allInnerTexts()).map(norm));
+    names.push(...(await locatorOf(page, 'confidence.menuitem.item').allInnerTexts()).map(norm));
     await page.keyboard.press('Escape');
     await closeMenus(page);
   }
@@ -87,29 +89,29 @@ async function listCategories(page: Page, t: (typeof TABS)[number]): Promise<str
 async function selectCategory(page: Page, t: (typeof TABS)[number], name: string): Promise<void> {
   await closeMenus(page);
   const box = categoryBox(page, t);
-  const chip = box.getByRole('button', { name, exact: true }).or(box.getByRole('button').filter({ hasText: exactText(name) }));
+  const chip = box.getByRole('button', { name, exact: true }).or(locatorOf(box, 'confidence.button.item').filter({ hasText: exactText(name) }));
   if (await chip.count()) {
     try { await chip.first().click({ timeout: 10_000 }); } catch { await closeMenus(page); await page.waitForTimeout(500); await chip.first().click({ timeout: 10_000, force: true }); }
     return;
   }
-  await box.getByRole('button', { name: /^More \(\d+\)/ }).click();
-  await page.getByRole('menuitem').filter({ hasText: exactText(name) }).first().click();
+  await locatorOf(box, 'confidence.button.more').click();
+  await locatorOf(page, 'confidence.menuitem.item').filter({ hasText: exactText(name) }).first().click();
 }
 
 async function listGates(page: Page, t: (typeof TABS)[number]): Promise<string[]> {
   const box = gateBox(page, t);
   if (!(await box.count())) return [];
-  return (await box.getByRole('button').allInnerTexts()).map(norm).filter(Boolean);
+  return (await locatorOf(box, 'confidence.button.item').allInnerTexts()).map(norm).filter(Boolean);
 }
 
 async function readRows(page: Page): Promise<Array<Omit<Row, 'tab' | 'category' | 'gate'>>> {
-  const rows = page.locator('table tbody tr');
+  const rows = locatorOf(page, 'confidence.css.table-tbody-tr');
   await rows.first().waitFor({ state: 'attached', timeout: 8_000 }).catch(() => undefined); // the table may still be loading
   const out: Array<Omit<Row, 'tab' | 'category' | 'gate'>> = [];
   for (let i = 0; i < (await rows.count()); i++) {
-    const tds = rows.nth(i).locator('td');
+    const tds = locatorOf(rows.nth(i), 'confidence.css.td');
     const cells = (await tds.allInnerTexts()).map(norm);
-    const exec = (await tds.nth(2).locator('[aria-label]').first().getAttribute('aria-label').catch(() => null)) ?? '';
+    const exec = (await locatorOf(tds.nth(2), 'confidence.css.aria-label').first().getAttribute('aria-label').catch(() => null)) ?? '';
     out.push({ name: cells[0] ?? '', value: cells[1] ?? '', exec, result: (cells[3] ?? '').toUpperCase(), coverage: cells[4] ?? '' });
   }
   return out;
@@ -135,18 +137,18 @@ function walkTab(index: number): CaseHandler<RepoPage> {
       const list: Array<string | null> = gateNames.length ? gateNames : [null];
       for (const g of list) {
         if (g) {
-          try { await gateBox(page, t).getByRole('button').filter({ hasText: exactText(g) }).first().click(); } catch (e) { await check(`${where} › ${g}: the gate can be opened`, async () => { throw e; }); continue; }
+          try { await locatorOf(gateBox(page, t), 'confidence.button.item').filter({ hasText: exactText(g) }).first().click(); } catch (e) { await check(`${where} › ${g}: the gate can be opened`, async () => { throw e; }); continue; }
         }
         gates += 1;
         const heading = gateHeading(page);
         const title = g ? `${where} › ${g}` : where;
         await check(`${title}: a gate heading "<name> Gate" is shown`, () => expect(heading).toBeVisible());
-        if (!shot) { shot = true; await snap(`${t.button} tab with the gate table open`, [heading, page.locator('table').first()]); }
+        if (!shot) { shot = true; await snap(`${t.button} tab with the gate table open`, [heading, locatorOf(page, 'confidence.css.table').first()]); }
         if (g) await check(`${title}: the heading names the gate "${g}"`, () => expect(heading).toHaveText(new RegExp(exactText(`${g} Gate`).source, 'i')));
         await check(`${title}: the gate status is "Completed"`, () =>
-          expect(heading.locator('xpath=..')).toContainText(/completed/i));
+          expect(locatorOf(heading, 'confidence.css.xpath')).toContainText(expectedOf('confidence.text.completed')));
         await check(`${title}: the table has the columns ${COLUMNS.join(', ')}`, async () => {
-          const heads = (await page.locator('table thead th').allInnerTexts()).map((h) => norm(h).toLowerCase());
+          const heads = (await locatorOf(page, 'confidence.css.table-thead-th').allInnerTexts()).map((h) => norm(h).toLowerCase());
           for (const c of COLUMNS) expect(heads, `column "${c}" missing`).toContain(c.toLowerCase());
         });
         const rows = await readRows(page);
@@ -178,9 +180,9 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
     await check('The breadcrumb shows "Confidence Engine"', () => expect(labelText(page, 'Confidence Engine').first()).toBeVisible());
     await check('The page title "PR Confidence Analysis" is shown', () => expect(pageTitle(page)).toBeVisible());
     await check('The sub-title explains "Evidence-based scoring across pipeline, whitebox, and blackbox gates."', () =>
-      expect(page.getByText(/Evidence-based scoring across pipeline, whitebox,? and blackbox gates/i).first()).toBeVisible());
+      expect(locatorOf(page, 'confidence.text.evidence-based-scoring-across-pipeli').first()).toBeVisible());
     await check('The header shows the commit (7 hex characters) and the start of the run id', async () => {
-      const text = await page.locator('body').innerText();
+      const text = await locatorOf(page, 'confidence.css.body').innerText();
       expect(text).toMatch(/[0-9a-f]{7}\s*·\s*[0-9a-f]{8}…?/i);
       expect(text.toLowerCase()).toContain(id.slice(0, 8).toLowerCase());
     });
@@ -198,7 +200,7 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
   'CE-002': async (ctx) => {
     await needPage(ctx);
     const { page, check, snap } = ctx;
-    await snap('Left menu with the Workspace links', page.getByRole('navigation', { name: 'Workspace' }));
+    await snap('Left menu with the Workspace links', locatorOf(page, 'confidence.navigation.workspace'));
     for (const [name, href] of [['Dashboard', '/dashboard'], ['Confidence Engine', '/confidence-engine'], ['Execution Assistant', '/execution-assistant'], ['Account and Plan', '/account']] as const) {
       await check(`Left menu link "${name}" is shown and goes to ${href}`, async () => {
         const link = page.getByRole('link', { name: exactText(name) }).first();
@@ -207,21 +209,21 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
       });
     }
     await check('The executions meter ("Executions: used / limit") is shown, links to /account and used is not above the limit', async () => {
-      const meter = page.locator('a[href="/account"]').filter({ hasText: /Executions:\s*\d+\s*\/\s*\d+/i }).first();
+      const meter = locatorOf(page, 'confidence.css.a-href-account').filter({ hasText: /Executions:\s*\d+\s*\/\s*\d+/i }).first();
       await expect(meter).toBeVisible();
       const m = norm(await meter.innerText()).match(/Executions:\s*(\d+)\s*\/\s*(\d+)/i)!;
       expect(num(m[1])).toBeLessThanOrEqual(num(m[2]));
     });
-    await check('Left menu "Sign out" button is shown', () => expect(page.getByRole('button', { name: /sign out/i }).first()).toBeVisible());
-    await check('The "Notifications" button is shown', () => expect(page.getByRole('button', { name: /notifications/i }).first()).toBeVisible());
-    await check('The "Support" button is shown', () => expect(page.getByRole('button', { name: /support/i }).first()).toBeVisible());
-    await check('The "Submit question" button is shown', () => expect(page.getByRole('button', { name: /submit question/i }).first()).toBeVisible());
+    await check('Left menu "Sign out" button is shown', () => expect(locatorOf(page, 'confidence.button.sign-out').first()).toBeVisible());
+    await check('The "Notifications" button is shown', () => expect(locatorOf(page, 'confidence.button.notifications').first()).toBeVisible());
+    await check('The "Support" button is shown', () => expect(locatorOf(page, 'confidence.button.support').first()).toBeVisible());
+    await check('The "Submit question" button is shown', () => expect(locatorOf(page, 'confidence.button.submit-question').first()).toBeVisible());
   },
 
   'CE-003': async (ctx) => {
     await needPage(ctx);
     const { page, check, note, snap } = ctx;
-    const selector = page.getByRole('combobox', { name: /branch run/i }).first();
+    const selector = locatorOf(page, 'confidence.combobox.branch-run').first();
     await check('The "Branch run" selector is shown', () => expect(selector).toBeVisible());
     await check('It shows a branch name, a commit (7 hex) and the start of the run id', async () => {
       const t = norm(await selector.innerText());
@@ -229,9 +231,9 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
       expect(t.toLowerCase()).toContain(runId(page).slice(0, 8).toLowerCase());
     });
     await selector.click({ timeout: 10_000 }).catch(() => note('The "Branch run" selector could not be clicked.'));
-    const options = page.getByRole('option');
+    const options = locatorOf(page, 'confidence.option.item');
     await check('Opening the selector lists at least one run', () => expect(options.first()).toBeVisible());
-    await snap('Branch run selector open with the list of runs', [selector, page.getByRole('listbox').first()]);
+    await snap('Branch run selector open with the list of runs', [selector, locatorOf(page, 'confidence.listbox.item').first()]);
     await check('The current run is among the options', async () => {
       const all = (await options.allInnerTexts()).map(norm).join(' | ');
       expect(all.toLowerCase()).toContain(runId(page).slice(0, 8).toLowerCase());
@@ -247,7 +249,7 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
   'CE-004': async (ctx) => {
     await needPage(ctx);
     const { page, check, note, snap } = ctx;
-    const body = norm(await page.locator('body').innerText());
+    const body = norm(await locatorOf(page, 'confidence.css.body').innerText());
     await snap('Score cards', [labelText(page, 'Confidence Score').first(), labelText(page, 'Validations Passed').first()]);
     for (const label of ['Confidence Score', 'Whitebox Score', 'Blackbox Score', 'Validations Passed']) {
       await check(`The "${label}" card is shown`, () => expect(labelText(page, label).first()).toBeVisible());
@@ -284,7 +286,7 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
   'CE-005': async (ctx) => {
     await needPage(ctx);
     const { page, check, note, snap } = ctx;
-    const toggle = page.getByRole('button', { name: /Execution Status/i }).first();
+    const toggle = locatorOf(page, 'confidence.button.execution-status').first();
     await check('"Execution Status" is shown with a final timer (for example "14m 27s")', async () => {
       await expect(toggle).toBeVisible();
       await expect(toggle).toContainText(/\d+m \d{2}s|\d+s/);
@@ -319,7 +321,7 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
     await snap('Gate Analysis with weights and figures', labelText(page, 'Gate Analysis').first());
     for (const gate of ['Pipeline Gate', 'Whitebox Confidence', 'Blackbox Confidence']) {
       await check(`"${gate}" shows a weight in %`, async () =>
-        expect(norm(await page.locator('body').innerText())).toMatch(new RegExp(`${gate}\\s*\\d+\\s*%\\s*weight`, 'i')));
+        expect(norm(await locatorOf(page, 'confidence.css.body').innerText())).toMatch(new RegExp(`${gate}\\s*\\d+\\s*%\\s*weight`, 'i')));
     }
     const read: Record<string, string> = {};
     for (const label of ['Total', 'Passed', 'Failed', 'Coverage', 'Retries', 'Loop', 'Pass Rate']) {
@@ -351,7 +353,7 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
     const { check, note, skip } = ctx;
     if (!walked.rows.length) skip('No table rows were read (the four tab cases CE-007 to CE-010 did not run), so there is nothing to compare.');
     const { page } = ctx;
-    if (await page.locator('table').first().isVisible().catch(() => false)) await ctx.snap('A classification table (all rows of the four tabs were compared)', page.locator('table').first());
+    if (await locatorOf(page, 'confidence.css.table').first().isVisible().catch(() => false)) await ctx.snap('A classification table (all rows of the four tabs were compared)', locatorOf(page, 'confidence.css.table').first());
     // Shows the FAILING rows in the picture: opens the tab, category and gate of the first wrong row and outlines every wrong row of that table.
     const showRows = async (wrong: Row[]): Promise<Locator[] | undefined> => {
       const first = wrong[0];
@@ -359,12 +361,12 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
       if (!first || !t || !/\/confidence-engine/.test(page.url())) return undefined;
       await openTab(page, t);
       await selectCategory(page, t, first.category);
-      if (first.gate) await gateBox(page, t).getByRole('button').filter({ hasText: exactText(first.gate) }).first().click();
-      await page.locator('table tbody tr').first().waitFor({ state: 'attached', timeout: 8_000 });
+      if (first.gate) await locatorOf(gateBox(page, t), 'confidence.button.item').filter({ hasText: exactText(first.gate) }).first().click();
+      await locatorOf(page, 'confidence.css.table-tbody-tr').first().waitFor({ state: 'attached', timeout: 8_000 });
       const names = new Set(wrong.filter((r) => r.tab === first.tab && r.category === first.category && r.gate === first.gate).map((r) => r.name));
-      const rowsHere = page.locator('table tbody tr').filter({ has: page.locator('td:first-child').filter({ hasText: new RegExp(`^\\s*(${[...names].map(esc).join('|')})\\s*$`) }) });
+      const rowsHere = locatorOf(page, 'confidence.css.table-tbody-tr').filter({ has: locatorOf(page, 'confidence.css.td-first-child').filter({ hasText: new RegExp(`^\\s*(${[...names].map(esc).join('|')})\\s*$`) }) });
       const n = await rowsHere.count();
-      return n ? Array.from({ length: Math.min(n, 8) }, (_, i) => rowsHere.nth(i)) : [page.locator('table').first()];
+      return n ? Array.from({ length: Math.min(n, 8) }, (_, i) => rowsHere.nth(i)) : [locatorOf(page, 'confidence.css.table').first()];
     };
     const bad = async (label: string, rows: Row[], expectFn: (r: Row) => boolean): Promise<void> => {
       const wrong = rows.filter((r) => !expectFn(r));
@@ -394,12 +396,12 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
     await needPage(ctx);
     const { page, check, note, snap } = ctx;
     let tipShot = false;
-    const info = page.getByRole('button', { name: /^About /i });
-    const infoIcon = (n: string): Locator => page.locator('table').getByLabel(exactText(`About ${n}`)).first();
+    const info = locatorOf(page, 'confidence.button.about');
+    const infoIcon = (n: string): Locator => locatorOf(page, 'confidence.css.table').getByLabel(exactText(`About ${n}`)).first();
     await check('The three "About ..." buttons next to the top links are shown', async () => {
       for (const n of ['About Confidence Object', 'About Confidence Graph', 'About Confidence Engine']) await expect(page.getByRole('button', { name: exactText(n) }).first()).toBeVisible();
     });
-    const tipBox = () => page.locator('[data-slot="tooltip-content"]:visible, [role="tooltip"]:visible, [role="dialog"]:visible').first();
+    const tipBox = () => locatorOf(page, 'confidence.css.data-slot-tooltip-content-visible-ro').first();
     const texts: string[] = [];
     for (const n of ['About Confidence Object', 'About Confidence Graph', 'About Confidence Engine']) {
       const b = page.getByRole('button', { name: exactText(n) }).first();
@@ -417,14 +419,14 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
     note(new Set(texts).size === texts.length ? 'The three explanation texts are different from each other.' : `Two of the three "About ..." explanation texts are the same: ${texts.map((x) => x.slice(0, 40)).join(' | ')}`);
     note(`"About ..." buttons on the page: ${await info.count()}`);
     await ctx.step('Open the "Code Intelligence" tab', () => openTab(page, TABS[0]));
-    await page.locator('table tbody tr').first().waitFor({ state: 'attached', timeout: 10_000 }).catch(() => undefined);
+    await locatorOf(page, 'confidence.css.table-tbody-tr').first().waitFor({ state: 'attached', timeout: 10_000 }).catch(() => undefined);
     await check('Every classification row has an "About <name>" info icon', async () => {
-      const names = (await page.locator('table tbody tr td:first-child').allInnerTexts()).map(norm).filter(Boolean);
+      const names = (await locatorOf(page, 'confidence.css.table-tbody-tr-td-first-child').allInnerTexts()).map(norm).filter(Boolean);
       expect(names.length).toBeGreaterThan(0);
       for (const n of names) await expect(infoIcon(n), `no "About ${n}" icon`).toBeAttached();
     });
     // pointing at the info icon of the rows of the open table shows the explanation of that classification
-    const rowNames = (await page.locator('table tbody tr td:first-child').allInnerTexts()).map(norm).filter(Boolean).slice(0, 6);
+    const rowNames = (await locatorOf(page, 'confidence.css.table-tbody-tr-td-first-child').allInnerTexts()).map(norm).filter(Boolean).slice(0, 6);
     for (const name of rowNames) {
       const icon = infoIcon(name);
       await icon.hover({ timeout: 5_000 }).catch(() => undefined);
@@ -442,13 +444,13 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
     const { page, check, snap } = ctx;
     for (const name of ['Notifications', 'Support']) {
       const b = page.getByRole('button', { name: new RegExp(`^\\s*${name}\\b`, 'i') }).first();
-      await check(`"${name}" is shown and closed to begin with`, async () => { await expect(b).toBeVisible(); await expect(b).not.toHaveAttribute('aria-expanded', 'true'); });
+      await check(`"${name}" is shown and closed to begin with`, async () => { await expect(b).toBeVisible(); await expect(b).not.toHaveAttribute('aria-expanded', expectedOf('confidence.attr.true')); });
       // An open panel hides the rest of the page from role queries, so the button is grabbed ONCE (before the click) and the same
       // element is read afterwards instead of searching for it again.
       const handle = await b.elementHandle({ timeout: 5_000 }).catch(() => null);
       const expanded = async (): Promise<string> => (handle ? await handle.evaluate((el) => el.getAttribute('aria-expanded') ?? '') : 'button not found');
       await check(`Clicking "${name}" opens it`, async () => { await b.click({ timeout: 5_000 }); await expect.poll(expanded, { timeout: 5_000 }).toBe('true'); });
-      if (name === 'Notifications') await snap('Notifications panel open', [b, page.locator('[role="dialog"]:visible, [data-state="open"]:visible').first()]);
+      if (name === 'Notifications') await snap('Notifications panel open', [b, locatorOf(page, 'confidence.css.role-dialog-visible-data-state-open').first()]);
       await page.keyboard.press('Escape');
       await check(`Pressing Escape closes "${name}"`, () => expect.poll(expanded, { timeout: 5_000 }).toBe('false'));
     }
@@ -457,7 +459,7 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
   'CE-014': async (ctx) => {
     await needPage(ctx);
     const { page, check, note, snap } = ctx;
-    const report = page.getByRole('button', { name: /Download full taxonomy gate report/i }).first();
+    const report = locatorOf(page, 'confidence.button.download-full-taxonomy-gate-report').first();
     await check('"Download full taxonomy gate report" is shown', () => expect(report).toBeVisible());
     await check('The report button is enabled', () => expect(report).toBeEnabled());
     await snap('Download full taxonomy gate report button (not clicked)', report);
@@ -467,17 +469,17 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
   'CE-015': async (ctx) => {
     await needPage(ctx);
     const { page, check, note, snap } = ctx;
-    const sha = (norm(await page.locator('body').innerText()).match(/\b([0-9a-f]{7})\s*·\s*[0-9a-f]{8}/i) ?? [])[1] ?? '';
+    const sha = (norm(await locatorOf(page, 'confidence.css.body').innerText()).match(/\b([0-9a-f]{7})\s*·\s*[0-9a-f]{8}/i) ?? [])[1] ?? '';
     await check('The chat says execution finished ("Execution finished — scores and evidence are ready on the right.")', () =>
-      expect(page.getByText(/Execution finished/i).last()).toBeVisible());
+      expect(locatorOf(page, 'confidence.text.execution-finished').last()).toBeVisible());
     await check('The chat says "Run complete — review scores, taxonomy evidence, and gate analysis ..."', () =>
-      expect(page.getByText(/Run complete/i).last()).toBeVisible());
-    await snap('Chat messages saying the run is complete', page.getByText(/Run complete/i).last());
-    const analyzed = page.getByText(/This commit is already analy[sz]ed/i);
+      expect(locatorOf(page, 'confidence.text.run-complete').last()).toBeVisible());
+    await snap('Chat messages saying the run is complete', locatorOf(page, 'confidence.text.run-complete').last());
+    const analyzed = locatorOf(page, 'confidence.text.this-commit-is-already-analy-sz-ed');
     if (await analyzed.count()) {
       await check('The "already analyzed" message names the same commit as the header', () => expect(analyzed.last()).toContainText(new RegExp(sha, 'i')));
       await check('"Analyze latest commit" is offered and enabled', async () => {
-        const b = page.getByRole('button', { name: /analy[sz]e latest commit/i }).last();
+        const b = locatorOf(page, 'confidence.button.analy-sz-e-latest-commit').last();
         await expect(b).toBeVisible();
         await expect(b).toBeEnabled();
       });
@@ -489,12 +491,12 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
     await needPage(ctx);
     const { page, check, snap } = ctx;
     const before = { id: runId(page), url: page.url() };
-    const scoreText = async () => norm((await page.locator('body').innerText()).match(/Confidence Score[\s\S]{0,60}?\d{1,3}\s*\/\s*100/i)?.[0] ?? '');
+    const scoreText = async () => norm((await locatorOf(page, 'confidence.css.body').innerText()).match(/Confidence Score[\s\S]{0,60}?\d{1,3}\s*\/\s*100/i)?.[0] ?? '');
     const first = await scoreText();
-    await page.getByRole('button', { name: /^\s*refresh\s*$/i }).first().click();
+    await locatorOf(page, 'confidence.button.refresh').first().click();
     await check('The page stays on the same run after Refresh', async () => { await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined); expect(runId(page)).toBe(before.id); });
     await check('The scores are the same after Refresh', async () => { await expect.poll(scoreText, { timeout: 30_000 }).toBe(first); });
-    await check('No error message appears after Refresh', () => expect(page.getByText(/something went wrong|failed to load|error loading|unable to load/i)).toHaveCount(0));
+    await check('No error message appears after Refresh', () => expect(locatorOf(page, 'confidence.text.something-went-wrong-failed-to-load')).toHaveCount(0));
     await check('The page title is still shown after Refresh', () => expect(pageTitle(page)).toBeVisible());
     await snap('Scores after Refresh', labelText(page, 'Confidence Score').first());
   },
@@ -512,11 +514,11 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
       });
       await check(`"${name}": the address keeps the same run id`, () => expect(runId(page)).toBe(id));
       await check(`"${name}": the page is not sent to the login page`, () => expect(page).not.toHaveURL(/\/auth\//));
-      await check(`"${name}": no error message is shown`, () => expect(page.getByText(/something went wrong|failed to load|unable to load|page not found|404 (error|not found)|error 404/i)).toHaveCount(0));
+      await check(`"${name}": no error message is shown`, () => expect(locatorOf(page, 'confidence.text.something-went-wrong-failed-to-load-2')).toHaveCount(0));
     }
     await ctx.step('Go back to "Confidence Engine"', async () => {
       if (!/pillar=engine/.test(page.url())) {
-        const link = page.locator('a[href*="/confidence-engine"][href*="pillar=engine"]:visible').first();
+        const link = locatorOf(page, 'confidence.css.a-href-confidence-engine-href-pillar').first();
         if (await link.count()) { await link.click(); await page.waitForURL(/pillar=engine/, { timeout: 20_000 }); } else await page.goto(home);
       }
     });
@@ -547,7 +549,7 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
 
     // Confidence Object
     let obj: Awaited<ReturnType<typeof readObject>> = {};
-    if (await open('Confidence Object', () => page.locator('a[href*="/confidence-engine"][href*="pillar=object"]').first().click(), /pillar=object/)) {
+    if (await open('Confidence Object', () => locatorOf(page, 'confidence.css.a-href-confidence-engine-href-pillar-2').first().click(), /pillar=object/)) {
       obj = await until(() => readObject(page, repoName), (v) => v.org !== undefined);
     }
     await check(`Confidence Object: "Avg Confidence" and the ORG score are the Confidence Engine score (${String(eng.score)})`, () => { same(obj.avg, eng.score, 'Avg Confidence'); same(obj.org, eng.score, 'ORG score'); });
@@ -558,7 +560,7 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
 
     // Confidence Graph
     let gr = { labels: [] as string[] } as Awaited<ReturnType<typeof readGraph>>;
-    if (await open('Confidence Graph', () => page.locator('a[href*="/confidence-engine"][href*="pillar=graph"]').first().click(), /pillar=graph/)) {
+    if (await open('Confidence Graph', () => locatorOf(page, 'confidence.css.a-href-confidence-engine-href-pillar-3').first().click(), /pillar=graph/)) {
       gr = await until(() => readGraph(page, id8), (v) => v.org !== undefined && v.historyScore !== undefined);
     }
     await check(`Confidence Graph: the Org score is the Confidence Engine score (${String(eng.score)})`, () => same(gr.org, eng.score, 'Org score'));
@@ -570,8 +572,8 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
 
     // Runs Dashboard
     let row: Awaited<ReturnType<typeof readDashboardRow>>;
-    if (await open('Dashboard', () => page.locator('a[href="/dashboard"]').first().click(), /\/dashboard/)) {
-      await page.locator('tbody tr').first().waitFor({ state: 'visible', timeout: 30_000 }).catch(() => undefined);
+    if (await open('Dashboard', () => locatorOf(page, 'confidence.css.a-href-dashboard').first().click(), /\/dashboard/)) {
+      await locatorOf(page, 'confidence.css.tbody-tr').first().waitFor({ state: 'visible', timeout: 30_000 }).catch(() => undefined);
       row = await until(() => readDashboardRow(page, id8), (v) => v !== undefined, 20_000);
     }
     await check(`Runs Dashboard: this run (${id8}) is listed`, () => expect(row, 'the run is not in the table').toBeDefined());
@@ -590,7 +592,7 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
   'CE-019': async (ctx) => {
     await needPage(ctx);
     const { page, check, note, snap } = ctx;
-    const text = norm(await page.locator('body').innerText());
+    const text = norm(await locatorOf(page, 'confidence.css.body').innerText());
     const cut = text.search(/TESTABLE\s*(>|Code)/i);
     const pane = cut > 0 ? text.slice(0, cut) : text;
     note(`Left pane starts: ${pane.slice(0, 220)}`);
@@ -608,15 +610,15 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
       expect(mins.length, 'no message time was found').toBeGreaterThan(0);
       mins.forEach((v, i) => { if (i) expect(v, `message ${i + 1} is earlier than the one before`).toBeGreaterThanOrEqual(mins[i - 1]); });
     });
-    await snap('Chat pane of the finished run', page.getByText(/whitebox complete/i).first());
+    await snap('Chat pane of the finished run', locatorOf(page, 'confidence.text.whitebox-complete').first());
   },
 
   'CE-020': async (ctx) => {
     await needPage(ctx);
     const { page, check, snap } = ctx;
-    const box = page.getByPlaceholder(/ask a confidence question/i).first();
-    const handle = page.locator('[role="separator"], [aria-label*="resize" i], [class*="resize" i], [class*="drag-handle" i], [class*="divider" i]').filter({ has: page.locator('svg') }).first()
-      .or(page.locator('[role="separator"]').first());
+    const box = locatorOf(page, 'confidence.placeholder.ask-a-confidence-question').first();
+    const handle = locatorOf(page, 'confidence.css.role-separator-aria-label-resize-i-c').filter({ has: locatorOf(page, 'confidence.css.svg') }).first()
+      .or(locatorOf(page, 'confidence.css.role-separator').first());
     await expect(handle, 'no handle between the chat pane and the results was found').toBeVisible({ timeout: 10_000 });
     const before = (await box.boundingBox())?.width ?? 0;
     const hb = await handle.boundingBox();
@@ -653,7 +655,7 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
 
 /** The downloaded taxonomy report, shared by TAXONOMY-01 .. 07. */
 const report: { file: string; html: string; text: string; runId: string } = { file: '', html: '', text: '', runId: '' };
-const DOWNLOAD_BUTTON = (page: Page): Locator => page.getByRole('button', { name: /Download full taxonomy gate report/i }).first();
+const DOWNLOAD_BUTTON = (page: Page): Locator => locatorOf(page, 'confidence.button.download-full-taxonomy-gate-report').first();
 
 /** Opens the downloaded HTML report in a second tab (file://) and returns it; the caller closes it. */
 async function openReport(page: Page): Promise<Page> {
@@ -690,7 +692,7 @@ const reportCase = (fn: (ctx: Parameters<CaseHandler<RepoPage>>[0], rp: Page) =>
   if (!name) return; // nothing was downloaded, so nothing inside it can be checked (the failed check above makes the case FAIL)
   note(`Downloaded ${name} and opened the saved file to check inside it`);
   const rp = await openReport(page);
-  try { report.text = norm(await rp.locator('body').innerText()); await fn(ctx, rp); } finally { await rp.close().catch(() => undefined); }
+  try { report.text = norm(await locatorOf(rp, 'confidence.css.body').innerText()); await fn(ctx, rp); } finally { await rp.close().catch(() => undefined); }
 };
 
 export const reportSteps: Record<string, CaseHandler<RepoPage>> = {
@@ -698,19 +700,19 @@ export const reportSteps: Record<string, CaseHandler<RepoPage>> = {
     await needPage(ctx);
     const { page, check, note, snap } = ctx;
     await ctx.step('Open the "Code Intelligence" tab', () => openTab(page, TABS[0]));
-    const box = page.getByRole('searchbox').or(page.getByPlaceholder(/search/i)).or(page.locator('input[type="search"]')).first();
+    const box = locatorOf(page, 'confidence.searchbox.item').or(locatorOf(page, 'confidence.placeholder.search')).or(locatorOf(page, 'confidence.css.input-type-search')).first();
     await snap('Confidence Engine gates area (looking for the search box)', box.or(gateBox(page, TABS[0])).first());
     await check('A search box for the gates is shown on the Confidence Engine page', () => expect(box).toBeVisible({ timeout: 5_000 }));
     if (!(await box.isVisible().catch(() => false))) return;
     const gates = await listGates(page, TABS[0]);
     const term = (gates[0] ?? walked.rows[0]?.name ?? 'Coverage').split(/\s+/)[0];
-    const countBefore = (await gateBox(page, TABS[0]).getByRole('button').count().catch(() => 0)) || (await page.locator('table tbody tr').count());
+    const countBefore = (await locatorOf(gateBox(page, TABS[0]), 'confidence.button.item').count().catch(() => 0)) || (await locatorOf(page, 'confidence.css.table-tbody-tr').count());
     await box.fill(term);
     await page.waitForTimeout(800);
     note(`Searched for "${term}"; items before: ${countBefore}`);
     await check(`Typing "${term}" keeps only the gates / rows that match it`, async () => {
-      const shown = (await gateBox(page, TABS[0]).getByRole('button').allInnerTexts().catch(() => [])).map(norm).filter(Boolean);
-      const rows = (await page.locator('table tbody tr td:first-child').allInnerTexts()).map(norm).filter(Boolean);
+      const shown = (await locatorOf(gateBox(page, TABS[0]), 'confidence.button.item').allInnerTexts().catch(() => [])).map(norm).filter(Boolean);
+      const rows = (await locatorOf(page, 'confidence.css.table-tbody-tr-td-first-child').allInnerTexts()).map(norm).filter(Boolean);
       const items = shown.length ? shown : rows;
       expect(items.length, 'nothing is left after the search').toBeGreaterThan(0);
       expect(items.filter((t) => !new RegExp(esc(term), 'i').test(t)), `items that do not contain "${term}"`).toEqual([]);
@@ -718,7 +720,7 @@ export const reportSteps: Record<string, CaseHandler<RepoPage>> = {
     await box.fill('');
     await page.waitForTimeout(500);
     await check('Clearing the search box shows all gates again', async () => {
-      const n = (await gateBox(page, TABS[0]).getByRole('button').count().catch(() => 0)) || (await page.locator('table tbody tr').count());
+      const n = (await locatorOf(gateBox(page, TABS[0]), 'confidence.button.item').count().catch(() => 0)) || (await locatorOf(page, 'confidence.css.table-tbody-tr').count());
       expect(n).toBe(countBefore);
     }, box);
   },
@@ -727,32 +729,32 @@ export const reportSteps: Record<string, CaseHandler<RepoPage>> = {
     await needPage(ctx);
     const { page, check, note, snap } = ctx;
     await ctx.step('Open the "Code Intelligence" tab', () => openTab(page, TABS[0]));
-    await page.locator('table tbody tr').first().waitFor({ state: 'visible', timeout: 15_000 }).catch(() => undefined);
-    const rows = page.locator('table tbody tr');
+    await locatorOf(page, 'confidence.css.table-tbody-tr').first().waitFor({ state: 'visible', timeout: 15_000 }).catch(() => undefined);
+    const rows = locatorOf(page, 'confidence.css.table-tbody-tr');
     if ((await rows.count()) === 0) ctx.skip('The metric table has no rows on this page, so there is no chevron to click.');
     // prefer a row that has a value
     let idx = 0;
     const n = await rows.count();
-    for (let i = 0; i < n; i++) if (!/^(—|N\/A|)$/i.test(norm(await rows.nth(i).locator('td').nth(1).innerText()))) { idx = i; break; }
+    for (let i = 0; i < n; i++) if (!/^(—|N\/A|)$/i.test(norm(await locatorOf(rows.nth(i), 'confidence.css.td').nth(1).innerText()))) { idx = i; break; }
     const row = rows.nth(idx);
-    const name = norm(await row.locator('td').first().innerText());
+    const name = norm(await locatorOf(row, 'confidence.css.td').first().innerText());
     note(`Clicked the chevron of "${name}"`);
-    await ctx.step(`Click the chevron of "${name}"`, async () => { await row.scrollIntoViewIfNeeded(); await row.locator('td').last().click(); });
-    const dlg = page.getByRole('dialog').first();
+    await ctx.step(`Click the chevron of "${name}"`, async () => { await row.scrollIntoViewIfNeeded(); await locatorOf(row, 'confidence.css.td').last().click(); });
+    const dlg = locatorOf(page, 'confidence.dialog.item').first();
     await check('A dialog opens', () => expect(dlg).toBeVisible({ timeout: 10_000 }), row);
     if (!(await dlg.isVisible().catch(() => false))) return;
     await snap(`Metric detail dialog of "${name}"`, dlg);
     await check(`The dialog names the metric "${name}"`, () => expect(dlg).toContainText(new RegExp(esc(name), 'i')));
     await check('The dialog shows the gate name', () => expect(norm(String(dlg.innerText())).length).toBeGreaterThan(name.length + 5));
     for (const label of ['Value', 'Status', 'Coverage']) await check(`The dialog shows "${label}"`, () => expect(dlg.getByText(new RegExp(`^\\s*${label}\\s*$`, 'i')).first()).toBeVisible());
-    await check('The dialog shows a coverage bar', () => expect(dlg.locator('[role="progressbar"], [class*="progress" i], [class*="bar" i]').first()).toBeVisible());
+    await check('The dialog shows a coverage bar', () => expect(locatorOf(dlg, 'confidence.css.role-progressbar-class-progress-i-cl').first()).toBeVisible());
     await check('The dialog has a "Leaf metrics" table with the columns metric, value, result and coverage', async () => {
-      await expect(dlg.getByText(/leaf metrics/i).first()).toBeVisible();
-      const heads = (await dlg.locator('th').allInnerTexts()).map((h) => norm(h).toLowerCase());
+      await expect(locatorOf(dlg, 'confidence.text.leaf-metrics').first()).toBeVisible();
+      const heads = (await locatorOf(dlg, 'confidence.css.th').allInnerTexts()).map((h) => norm(h).toLowerCase());
       for (const c of ['metric', 'value', 'result', 'coverage']) expect(heads.some((h) => h.includes(c)), `column ${c} (columns: ${heads.join(', ')})`).toBe(true);
     });
     await check('The X button closes the dialog', async () => {
-      await dlg.getByRole('button', { name: /close|×|x/i }).first().click();
+      await locatorOf(dlg, 'confidence.button.close-x').first().click();
       await expect(dlg).toBeHidden({ timeout: 5_000 });
     });
   },
@@ -760,30 +762,30 @@ export const reportSteps: Record<string, CaseHandler<RepoPage>> = {
   'CONFASST-04': async (ctx) => {
     await needPage(ctx);
     const { page, check, note, snap } = ctx;
-    const box = page.getByRole('textbox', { name: /ask a confidence question/i }).or(page.getByPlaceholder(/ask a confidence question/i)).first();
+    const box = locatorOf(page, 'confidence.textbox.ask-a-confidence-question').or(locatorOf(page, 'confidence.placeholder.ask-a-confidence-question')).first();
     const question = 'Which gates failed for this run?';
     await snap('The question box', box);
     await check('The question box "Ask a confidence question" is shown', () => expect(box).toBeVisible());
     if (!(await box.isVisible().catch(() => false))) return;
-    const before = norm(await page.locator('body').innerText()).length;
+    const before = norm(await locatorOf(page, 'confidence.css.body').innerText()).length;
     await box.fill(question);
     await box.press('Enter');
     note(`Sent the question: "${question}"`);
     await check('The question appears in the thread', () => expect(page.getByText(question, { exact: false }).first()).toBeVisible({ timeout: 15_000 }), box);
     await check('A reply follows the question (new text appears below it within 2 minutes)', async () => {
-      await expect.poll(async () => norm(await page.locator('body').innerText()).length, { timeout: 120_000, intervals: [2_000] }).toBeGreaterThan(before + question.length + 40);
+      await expect.poll(async () => norm(await locatorOf(page, 'confidence.css.body').innerText()).length, { timeout: 120_000, intervals: [2_000] }).toBeGreaterThan(before + question.length + 40);
     }, page.getByText(question, { exact: false }).last());
   },
 
   'CONFASST-05': async (ctx) => {
     await needPage(ctx);
     const { page, check, note, snap } = ctx;
-    const text0 = norm(await page.locator('body').innerText());
+    const text0 = norm(await locatorOf(page, 'confidence.css.body').innerText());
     if (!/which gates failed for this run/i.test(text0)) ctx.skip('The question of CONFASST-04 was not sent in this run (CONFASST-04 did not run), so there is no reply to read.');
     const scores = await runApi(page, 'scores');
-    const thread = norm(await page.locator('body').innerText());
+    const thread = norm(await locatorOf(page, 'confidence.css.body').innerText());
     const after = thread.slice(thread.toLowerCase().lastIndexOf('which gates failed for this run') + 30);
-    await snap('The reply to the question', page.getByText(/which gates failed for this run/i).last());
+    await snap('The reply to the question', locatorOf(page, 'confidence.text.which-gates-failed-for-this-run').last());
     note(`Reply starts: ${after.slice(0, 300)}`);
     await check('The reply names a gate, testing type, score or metric of this run', () => {
       const names = [...TABS.map((t) => t.button), ...walked.rows.slice(0, 200).map((r) => r.name), String(scores.overall_score ?? '')].filter((x) => x && x.length > 2);
@@ -803,7 +805,7 @@ export const reportSteps: Record<string, CaseHandler<RepoPage>> = {
     await check(`The file is named taxonomy-gate-${id}.html`, () => expect(name).toMatch(new RegExp(`^taxonomy-gate-${esc(id)}\\.html$`, 'i')));
     const rp = await openReport(page);
     try {
-      report.text = norm(await rp.locator('body').innerText());
+      report.text = norm(await locatorOf(rp, 'confidence.css.body').innerText());
       await check('The saved file opens as an HTML page with a title', async () => { expect(report.text.length, 'empty report').toBeGreaterThan(20); expect(report.html).toMatch(/<title>[^<]+<\/title>|<h1[\s>]/i); });
       await check('The report shows a generated timestamp', () => expect(report.text).toMatch(/generated[^]{0,40}\d{4}|\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}|\d{1,2}\/\d{1,2}\/\d{4}/i));
     } finally { await rp.close().catch(() => undefined); }
@@ -811,11 +813,11 @@ export const reportSteps: Record<string, CaseHandler<RepoPage>> = {
 
   'TAXONOMY-02': reportCase(async (ctx, rp) => {
     const { page, check, note } = ctx;
-    const t = norm(await rp.locator('body').innerText());
+    const t = norm(await locatorOf(rp, 'confidence.css.body').innerText());
     const id = runId(page);
     const summary = await runApi(page, 'summary');
     const scores = await runApi(page, 'scores');
-    const head = norm(await page.locator('body').innerText());
+    const head = norm(await locatorOf(page, 'confidence.css.body').innerText());
     const commit = (head.match(/\b([0-9a-f]{7})\s*·\s*[0-9a-f]{8}/i) ?? [])[1] ?? '';
     const { repo, branch } = { repo: String((ctx as unknown as { input: { repo?: string } }).input?.repo ?? ''), branch: new URL(page.url()).searchParams.get('branch') ?? '' };
     note(`Report text starts: ${t.slice(0, 300)}`);
@@ -835,14 +837,14 @@ export const reportSteps: Record<string, CaseHandler<RepoPage>> = {
 
   'TAXONOMY-03': reportCase(async (ctx, rp) => {
     const { check } = ctx;
-    const t = norm(await rp.locator('body').innerText());
+    const t = norm(await locatorOf(rp, 'confidence.css.body').innerText());
     if (!walked.rows.length) ctx.skip('The Confidence Engine tables were not read in this run (CE-007 to CE-010 did not run), so there is nothing to compare with.');
     for (const tab of TABS) await check(`The report has a section for "${tab.button}" with a score out of 100`, () => {
       expect(t).toMatch(new RegExp(esc(tab.button), 'i'));
       expect(t).toMatch(/\d+(\.\d+)?\s*\/\s*100/);
     });
     await check('The report has tables with the columns Classification, Value, Execution status, Result and Coverage', async () => {
-      const heads = (await rp.locator('th').allInnerTexts()).map((h) => norm(h).toLowerCase());
+      const heads = (await locatorOf(rp, 'confidence.css.th').allInnerTexts()).map((h) => norm(h).toLowerCase());
       for (const c of COLUMNS) expect(heads.some((h) => h.includes(c.toLowerCase())), `column ${c}`).toBe(true);
     });
     await check('Every classification read from the Confidence Engine is in the report', () => {
@@ -854,7 +856,7 @@ export const reportSteps: Record<string, CaseHandler<RepoPage>> = {
   'TAXONOMY-04': reportCase(async (ctx, rp) => {
     const { check, note } = ctx;
     if (!walked.rows.length) ctx.skip('The Confidence Engine tables were not read in this run (CE-007 to CE-010 did not run), so there is nothing to compare with.');
-    const reportRows = (await rp.locator('table tbody tr').evaluateAll((trs) => trs.map((tr) => Array.from(tr.querySelectorAll('td')).map((td) => (td.textContent ?? '').replace(/\s+/g, ' ').trim())))).filter((r) => r.length >= 4);
+    const reportRows = (await locatorOf(rp, 'confidence.css.table-tbody-tr').evaluateAll((trs) => trs.map((tr) => Array.from(tr.querySelectorAll('td')).map((td) => (td.textContent ?? '').replace(/\s+/g, ' ').trim())))).filter((r) => r.length >= 4);
     const unique = new Map(walked.rows.map((r) => [`${r.name}|${r.result}`, r]));
     note(`${walked.rows.length} rows read in the UI (${unique.size} different classification + result pairs); ${reportRows.length} rows in the report. The "Metric Analysis" sheet is not part of this suite, so the UI is compared with the report only.`);
     await check('The report has table rows', () => expect(reportRows.length).toBeGreaterThan(0));
@@ -866,22 +868,22 @@ export const reportSteps: Record<string, CaseHandler<RepoPage>> = {
 
   'TAXONOMY-05': reportCase(async (ctx, rp) => {
     const { check, note, skip } = ctx;
-    const failRows = rp.locator('table tbody tr').filter({ hasText: /\bFAIL\b/ });
+    const failRows = locatorOf(rp, 'confidence.css.table-tbody-tr').filter({ hasText: /\bFAIL\b/ });
     if ((await failRows.count()) === 0) skip('The report of this run has no FAIL row, so there is no evidence link to look for.');
     note(`${await failRows.count()} FAIL rows in the report`);
-    await check('A FAIL row has evidence links', () => expect(failRows.first().locator('a[href]').first()).toBeVisible());
+    await check('A FAIL row has evidence links', () => expect(locatorOf(failRows.first(), 'confidence.css.a-href').first()).toBeVisible());
     await check('The evidence links give a file path and a line number', async () => {
       const t = norm(await failRows.first().innerText());
-      const hrefs = await failRows.first().locator('a[href]').evaluateAll((as) => as.map((a) => a.getAttribute('href') ?? ''));
+      const hrefs = await locatorOf(failRows.first(), 'confidence.css.a-href').evaluateAll((as) => as.map((a) => a.getAttribute('href') ?? ''));
       expect(t + ' ' + hrefs.join(' ')).toMatch(/[\w./-]+\.\w+[:#L]+\d+|#L\d+/);
     }, failRows.first());
   }),
 
   'TAXONOMY-06': reportCase(async (ctx, rp) => {
     const { page, check, note, skip } = ctx;
-    const links = await rp.locator('a[href*="github.com"]').evaluateAll((as) => as.map((a) => a.getAttribute('href') ?? ''));
+    const links = await locatorOf(rp, 'confidence.css.a-href-github-com').evaluateAll((as) => as.map((a) => a.getAttribute('href') ?? ''));
     if (links.length === 0) skip('The report has no GitHub evidence link, so there is nothing to open.');
-    const head = norm(await page.locator('body').innerText());
+    const head = norm(await locatorOf(page, 'confidence.css.body').innerText());
     const commit = (head.match(/\b([0-9a-f]{7})\s*·\s*[0-9a-f]{8}/i) ?? [])[1] ?? '';
     note(`${links.length} GitHub links; first: ${links[0]}`);
     await check('The evidence link points to a file at the analysed commit', () => expect(links[0].toLowerCase()).toContain(commit.toLowerCase()));
@@ -891,15 +893,15 @@ export const reportSteps: Record<string, CaseHandler<RepoPage>> = {
 
   'TAXONOMY-07': reportCase(async (ctx, rp) => {
     const { check, note, skip } = ctx;
-    const naRows = rp.locator('table tbody tr').filter({ hasText: /\bN\/A\b/ });
+    const naRows = locatorOf(rp, 'confidence.css.table-tbody-tr').filter({ hasText: /\bN\/A\b/ });
     if ((await naRows.count()) === 0) skip('The report of this run has no N/A row, so there is nothing "not measured" to look for.');
     note(`${await naRows.count()} rows with N/A in the report`);
     await check('A row with the value N/A also has the Result N/A', async () => {
-      const cells = (await naRows.first().locator('td').allInnerTexts()).map(norm);
+      const cells = (await locatorOf(naRows.first(), 'confidence.css.td').allInnerTexts()).map(norm);
       expect(cells.filter((c) => /^N\/A$/i.test(c)).length, `cells: ${cells.join(' | ')}`).toBeGreaterThanOrEqual(2);
     }, naRows.first());
     await check('The report says the classification was not measured', async () => {
-      const t = norm(await rp.locator('body').innerText());
+      const t = norm(await locatorOf(rp, 'confidence.css.body').innerText());
       expect(t).toMatch(/not measured|not executed|not applicable|not run/i);
     });
   }),

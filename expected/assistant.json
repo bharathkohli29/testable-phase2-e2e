@@ -1,0 +1,7 @@
+{
+  "assistant.text.recommended": {"regex":"recommended","flags":"i"},
+  "assistant.text.review-the-latest-changes-for": {"regex":"review the latest changes for release blockers and confidence","flags":"i"},
+  "assistant.text.identify-vulnerable-code-risky-dependencies": {"regex":"identify vulnerable code,?\\s*risky dependencies,?\\s*and security hotspots","flags":"i"},
+  "assistant.text.coming-soon": {"regex":"coming soon","flags":"i"},
+  "assistant.text.this-updates-the-tenant-default": {"regex":"this updates the tenant default\\.?\\s*historical runs stay on the repository that produced them","flags":"i"}
+}

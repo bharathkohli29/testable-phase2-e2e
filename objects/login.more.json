@@ -1,0 +1,25 @@
+{
+  "_comment": "Module login: locators moved out of the code (one entry per line). Keys are made from the role and text; rename them freely.",
+
+  "login.css.login-field": { "css": "#login_field", "pick": "all" },
+  "login.css.password": { "css": "#password", "pick": "all" },
+  "login.button.authorize": { "role": "button", "name": "^Authorize", "match": "regex", "pick": "all" },
+  "login.css.input-type-email": { "css": "input[type=\"email\"]", "pick": "all" },
+  "login.css.input-type-password": { "css": "input[type=\"password\"]", "pick": "all" },
+  "login.text.unable-to-sign-you-in-right-now-try": { "text": "unable to sign you in right now|try again in a few moments", "match": "regex", "pick": "all" },
+  "login.css.a-href": { "css": "a[href^=\"/\"]", "pick": "all" },
+  "login.heading.item": { "role": "heading", "pick": "all" },
+  "login.css.input-name-loginfmt": { "css": "input[name=\"loginfmt\"]", "pick": "all" },
+  "login.css.input-name-passwd": { "css": "input[name=\"passwd\"]", "pick": "all" },
+  "login.button.no": { "role": "button", "name": "^No$", "match": "regex", "flags": "", "pick": "all" },
+  "login.css.visible": { "css": ": visible", "pick": "all" },
+  "login.heading.item-2": { "role": "heading", "level": 1, "pick": "all" },
+  "login.css.svg-img": { "css": "svg, img", "pick": "all" },
+  "login.button.sign-in-with-sso": { "role": "button", "name": "Sign in with SSO", "match": "playwright", "exact": true, "pick": "all" },
+  "login.css.sso-provider-list": { "css": "#sso-provider-list", "pick": "all" },
+  "login.option.item": { "role": "option", "pick": "all" },
+  "login.css.emailorusername": { "css": "#emailOrUsername", "pick": "all" },
+  "login.button.authenticate": { "role": "button", "name": "^Authenticate", "match": "regex", "pick": "all" },
+  "login.button.sign-in-with-google-microsoft-github": { "role": "button", "name": "^Sign in with (Google|Microsoft|GitHub)$", "match": "regex", "flags": "", "pick": "all" },
+  "login.css.input-type-email-input-name-identifi": { "css": "input[type=\"email\"], input[name=\"identifier\"], input[name=\"username\"], input[name=\"login\"], input[type=\"text\"]", "pick": "all" }
+}

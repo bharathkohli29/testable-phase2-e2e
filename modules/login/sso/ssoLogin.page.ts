@@ -1,4 +1,5 @@
 import { Locator, Page } from '@playwright/test';
+import { obj as locatorOf } from '../../../core/keywords/obj';
 
 /**
  * "Sign in with SSO". Verified live on /auth/login:
@@ -21,13 +22,13 @@ export class SsoLoginPage {
   constructor(page: Page, baseUrl: string) {
     this.page = page;
     this.baseUrl = baseUrl;
-    this.heading = page.getByRole('heading', { level: 1 });
-    this.trigger = page.getByRole('button', { name: 'Sign in with SSO', exact: true });
-    this.list = page.locator('#sso-provider-list');
-    this.options = this.list.getByRole('option');
-    this.email = page.locator('#emailOrUsername');
-    this.submit = page.getByRole('button', { name: /^Authenticate/i }); // role + name: works whatever the button's type attribute is
-    this.socialButtons = page.getByRole('button', { name: /^Sign in with (Google|Microsoft|GitHub)$/ });
+    this.heading = locatorOf(page, 'login.heading.item-2');
+    this.trigger = locatorOf(page, 'login.button.sign-in-with-sso');
+    this.list = locatorOf(page, 'login.css.sso-provider-list');
+    this.options = locatorOf(this.list, 'login.option.item');
+    this.email = locatorOf(page, 'login.css.emailorusername');
+    this.submit = locatorOf(page, 'login.button.authenticate'); // role + name: works whatever the button's type attribute is
+    this.socialButtons = locatorOf(page, 'login.button.sign-in-with-google-microsoft-github');
   }
 
   async open(): Promise<void> {
@@ -57,12 +58,11 @@ export class SsoLoginPage {
   async completeIdpLogin(email: string, password: string): Promise<void> {
     const origin = new URL(this.baseUrl).origin;
     await this.page.waitForURL((u) => u.origin !== origin, { timeout: 30_000 });
-    const user = this.page
-      .locator('input[type="email"], input[name="identifier"], input[name="username"], input[name="login"], input[type="text"]')
+    const user = locatorOf(this.page, 'login.css.input-type-email-input-name-identifi')
       .first();
     await user.fill(email);
     await user.press('Enter');
-    const pw = this.page.locator('input[type="password"]').first();
+    const pw = locatorOf(this.page, 'login.css.input-type-password').first();
     await pw.waitFor({ state: 'visible', timeout: 30_000 });
     await pw.fill(password);
     await pw.press('Enter');

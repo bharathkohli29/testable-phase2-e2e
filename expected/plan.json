@@ -1,0 +1,5 @@
+{
+  "plan.text.review-scope-and-what-we": {"regex":"review scope and what we.ll classify,?\\s*then execute","flags":"i"},
+  "plan.text.review-scope-and-what-we-2": {"regex":"Review scope and what we.ll classify\\.?\\s*Execute starts the white\\s*box pipeline on your repo","flags":"i"},
+  "plan.text.selected-branch-tip-sha": {"regex":"Selected branch\\s*\\(tip SHA\\)","flags":"i"}
+}

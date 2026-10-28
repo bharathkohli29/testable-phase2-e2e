@@ -1,0 +1,22 @@
+{
+  "_help": "Order of the modules = order in this list. enabled=false skips a module (Sign up is off). The title is what -g \"1 · Login module\" matches. Keys must match the step lists in modules/flow/journey.spec.ts.",
+  "modules": [
+    {"key": "login", "enabled": true, "title": "1 · Login module (page checks → Authenticate → signed-in checks)", "timeoutSec": 900, "needs": "start", "provides": "login"},
+    {"key": "assistant", "enabled": true, "title": "2 · Assistant home module (headline, analysis cards, header, Change repository dialog - nothing is started)", "timeoutSec": 600, "needs": "login", "provides": "login"},
+    {"key": "repo", "enabled": true, "title": "3 · Repo module (home → import repository → choose repository → branch → Confirm)", "timeoutSec": 900, "needs": "login", "provides": "confirm"},
+    {"key": "coverage", "enabled": true, "title": "4 · Coverage module (Coverage preview → Review branches → Continue)", "timeoutSec": 900, "needs": "confirm", "provides": "plan"},
+    {"key": "plan", "enabled": true, "title": "5 · Plan module (Run plan - Execute run is never clicked)", "timeoutSec": 600, "needs": "plan", "provides": "plan"},
+    {"key": "context", "enabled": true, "title": "6 · Context module (Repository ready bar, Source details, Repository history)", "timeoutSec": 600, "needs": "plan", "provides": "plan"},
+    {"key": "execution", "enabled": true, "title": "7 · Execution module (Execute run → Open Confidence Engine → wait for the run → results)", "timeoutSec": 2400, "needs": "plan", "provides": "finished"},
+    {"key": "confidence", "enabled": true, "title": "8 · Confidence Engine module (every part of the Confidence Engine page after the run)", "timeoutSec": 1500, "needs": "finished", "provides": "finished"},
+    {"key": "graph", "enabled": true, "title": "9 · Confidence Graph module (every part of the Confidence Graph page)", "timeoutSec": 1200, "needs": "finished", "provides": "finished"},
+    {"key": "object", "enabled": true, "title": "10 · Confidence Object module (every part of the Confidence Object page)", "timeoutSec": 1200, "needs": "finished", "provides": "finished"},
+    {"key": "latestcommit", "enabled": true, "title": "11 · Latest commit module (dummy README commit → Analyze latest commit → wait for the new run)", "timeoutSec": 2700, "needs": "finished", "provides": "finished"},
+    {"key": "dashboard", "enabled": true, "title": "12 · Dashboard module (the Runs Dashboard page)", "timeoutSec": 900, "needs": "login", "provides": "login"},
+    {"key": "account", "enabled": true, "title": "13 · Account module (Account page and Billing page - nothing is bought or changed)", "timeoutSec": 900, "needs": "login", "provides": "login"},
+    {"key": "support", "enabled": true, "title": "14 · Support module (Support menu, Live Chat, ticket dialog, User Guide - nothing is sent)", "timeoutSec": 900, "needs": "login", "provides": "login"},
+    {"key": "redirects", "enabled": true, "title": "15 · Redirects module (404 pages, old addresses, SCM integrations, left menu, run id protection)", "timeoutSec": 600, "needs": "login", "provides": "login"},
+    {"key": "signout", "enabled": true, "title": "16 · Sign out module (sign out → sign in with Enter)", "timeoutSec": 300, "needs": "login", "provides": "login", "resets": true},
+    {"key": "signup", "enabled": false, "title": "17 · Sign up module (the Register page - NO account is ever created)", "timeoutSec": 900, "needs": "start", "provides": "start", "resets": true}
+  ]
+}

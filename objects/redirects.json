@@ -1,0 +1,13 @@
+{
+  "_comment": "Module redirects: locators moved out of the code (one entry per line). Keys are made from the role and text; rename them freely.",
+
+  "redirects.text.this-page-could-not-be-found": { "text": "this page could not be found", "match": "contains", "pick": "all" },
+  "redirects.button.sign-out": { "role": "button", "name": "Sign out", "match": "playwright", "exact": true, "pick": "all" },
+  "redirects.text.scm-integrations": { "text": "scm integrations", "match": "exact", "pick": "all" },
+  "redirects.text.manage-your-connected-source-control": { "text": "manage your connected source control providers", "match": "contains", "pick": "all" },
+  "redirects.button.connect-provider": { "role": "button", "name": "connect provider", "match": "contains", "pick": "all" },
+  "redirects.text.no-organi-sz-ation-specified-somethi": { "text": "no organi[sz]ation specified|something went wrong|failed to load", "match": "regex", "pick": "all" },
+  "redirects.text.no-organi-sz-ation-specified": { "text": "no organi[sz]ation specified", "match": "regex", "pick": "all" },
+  "redirects.button.back-to-home": { "role": "button", "name": "back to home", "match": "contains", "pick": "all" },
+  "redirects.navigation.workspace": { "role": "navigation", "name": "workspace", "match": "contains", "pick": "all" }
+}

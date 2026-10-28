@@ -1,0 +1,28 @@
+{
+  "_comment": "Module signup: locators moved out of the code (one entry per line). Keys are made from the role and text; rename them freely.",
+
+  "signup.css.fullname": { "css": "#fullName", "pick": "all" },
+  "signup.css.accounttype": { "css": "#accountType", "pick": "all" },
+  "signup.css.option": { "css": "option", "pick": "all" },
+  "signup.css.form": { "css": "form", "pick": "all" },
+  "signup.button.create-account": { "role": "button", "name": "Create Account", "match": "playwright", "pick": "all" },
+  "signup.css.organisationname": { "css": "#organisationName", "pick": "all" },
+  "signup.css.workemail": { "css": "#workEmail", "pick": "all" },
+  "signup.css.password": { "css": "#password", "pick": "all" },
+  "signup.link.register": { "role": "link", "name": "register", "match": "contains", "pick": "all" },
+  "signup.text.create-account": { "text": "create account", "match": "exact", "pick": "all" },
+  "signup.text.start-shipping-better-code-in-under": { "text": "start shipping better code in under a minute", "match": "contains", "pick": "all" },
+  "signup.text.ship-with-confidence": { "text": "ship with confidence", "match": "contains", "pick": "all" },
+  "signup.text.already-have-an-account": { "text": "already have an account", "match": "contains", "pick": "all" },
+  "signup.text.by-signing-up-you-agree-to-our": { "text": "by signing up,? you agree to our", "match": "regex", "pick": "all" },
+  "signup.css.option-checked": { "css": "option:checked", "pick": "all" },
+  "signup.button.show-password": { "role": "button", "name": "show password", "match": "contains", "pick": "all" },
+  "signup.button.hide-password": { "role": "button", "name": "hide password", "match": "contains", "pick": "all" },
+  "signup.button.sign-up-with-sso": { "role": "button", "name": "sign up with sso", "match": "contains", "pick": "all" },
+  "signup.text.or": { "text": "^or$", "match": "regex", "pick": "all" },
+  "signup.button.github": { "role": "button", "name": "GitHub", "match": "playwright", "pick": "all" },
+  "signup.text.okta-com": { "text": "okta.com", "match": "contains", "pick": "all" },
+  "signup.link.sign-in": { "role": "link", "name": "sign in", "match": "exact", "pick": "all" },
+  "signup.text.welcome-back": { "text": "welcome back", "match": "contains", "pick": "all" },
+  "signup.css.accounttype-option-checked": { "css": "#accountType option:checked", "pick": "all" }
+}

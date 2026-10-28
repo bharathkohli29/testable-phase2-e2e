@@ -1,0 +1,22 @@
+{
+  "_comment": "Module plan: locators moved out of the code (one entry per line). Keys are made from the role and text; rename them freely.",
+
+  "plan.css.xpath-ancestor-button-normalize-spac": { "css": "xpath=ancestor::*[.//button[normalize-space()=\"Execute run\"]][1]", "pick": "all" },
+  "plan.text.run-plan": { "text": "Run plan", "match": "exact", "pick": "all" },
+  "plan.css.xpath-following-sibling-1": { "css": "xpath=following-sibling::*[1]", "pick": "all" },
+  "plan.text.commit": { "text": "Commit", "match": "exact", "pick": "all" },
+  "plan.text.saved-your-selection": { "text": "Saved your selection", "match": "contains", "pick": "all" },
+  "plan.button.on-pr-merge": { "role": "button", "name": "on pr merge", "match": "contains", "pick": "all" },
+  "plan.text.on-pr-merge": { "text": "on pr merge", "match": "contains", "pick": "all" },
+  "plan.text.here-s-the-run-plan-for-white-box-an": { "text": "Here.s the\\s*Run plan\\s*for White Box Analysis", "match": "regex", "pick": "all" },
+  "plan.text.confirm-white-box-plan": { "text": "Confirm white box plan", "match": "contains", "pick": "all" },
+  "plan.text.project": { "text": "Project", "match": "exact", "pick": "all" },
+  "plan.text.repository": { "text": "Repository", "match": "exact", "pick": "all" },
+  "plan.radiogroup.branch-es-to-analy-sz-e": { "role": "radiogroup", "name": "Branch(es)? to analy[sz]e", "match": "regex", "pick": "all" },
+  "plan.text.branches-to-analyze": { "text": "Branches to analyze", "match": "exact", "pick": "all" },
+  "plan.radio.item": { "role": "radio", "pick": "all" },
+  "plan.text.analysis-axes-taxonomy": { "text": "Analysis axes (taxonomy)", "match": "exact", "pick": "all" },
+  "plan.listitem.item": { "role": "listitem", "pick": "all" },
+  "plan.button.execute-run": { "role": "button", "name": "Execute run", "match": "exact", "pick": "all" },
+  "plan.button.item": { "role": "button", "pick": "all" }
+}

@@ -1,0 +1,26 @@
+{
+  "_comment": "Module assistant: locators moved out of the code (one entry per line). Keys are made from the role and text; rename them freely.",
+
+  "assistant.text.start-with-an-analysis": { "text": "start with an analysis", "match": "exact", "pick": "all" },
+  "assistant.textbox.ask-anything": { "role": "textbox", "name": "ask anything", "match": "contains", "pick": "all" },
+  "assistant.button.new-conversation": { "role": "button", "name": "new conversation", "match": "contains", "pick": "all" },
+  "assistant.button.item": { "role": "button", "pick": "all" },
+  "assistant.heading.know-before-you-deploy": { "role": "heading", "name": "know before you deploy", "match": "contains", "pick": "all" },
+  "assistant.text.analy-sz-es-your-code-runtime-behavi": { "text": "analy[sz]es your code,?\\s*runtime behavio(u)?r,?\\s*and risks to measure production confidence", "match": "regex", "pick": "all" },
+  "assistant.text.choose-one-of-the-analyses-below-or": { "text": "choose one of the analyses below or ask your own question", "match": "contains", "pick": "all" },
+  "assistant.text.code-analysis": { "text": "code analysis", "match": "exact", "pick": "all" },
+  "assistant.text.runtime-analysis": { "text": "runtime analysis", "match": "exact", "pick": "all" },
+  "assistant.group.connected-tools": { "role": "group", "name": "connected tools", "match": "contains", "pick": "all" },
+  "assistant.text.github-gitlab-bitbucket-azure-devops": { "text": "\\b(github|gitlab|bitbucket|azure devops)\\s+connected\\b", "match": "regex", "pick": "all" },
+  "assistant.css.a-href-account": { "css": "a[href=\"/account\"]", "pick": "all" },
+  "assistant.button.change-repository-branch": { "role": "button", "name": "change repository\\s*\\/\\s*branch", "match": "regex", "pick": "all" },
+  "assistant.text.repository-ready-repository": { "text": "repository ready|repository", "match": "regex", "pick": "all" },
+  "assistant.dialog.item": { "role": "dialog", "pick": "all" },
+  "assistant.heading.change-repository-branch": { "role": "heading", "name": "change repository\\s*\\/\\s*branch", "match": "regex", "pick": "all" },
+  "assistant.text.1-choose-repository": { "text": "1\\.?\\s*choose repository", "match": "regex", "pick": "all" },
+  "assistant.css.role-listitem-role-radio-button-div": { "css": "[role=\"listitem\"], [role=\"radio\"], button, div", "pick": "all" },
+  "assistant.text.current": { "text": "Current", "match": "exact", "pick": "all" },
+  "assistant.button.connect-import-repository": { "role": "button", "name": "connect\\s*\\/\\s*import repository", "match": "regex", "pick": "all" },
+  "assistant.button.continue": { "role": "button", "name": "continue", "match": "exact", "pick": "all" },
+  "assistant.button.close": { "role": "button", "name": "close", "match": "exact", "pick": "all" }
+}

@@ -1,5 +1,5 @@
-import type { Locator, Page } from '@playwright/test';
-import { loadObjects, locate, ObjectRepo } from './objects';
+import type { Locator } from '@playwright/test';
+import { loadObjects, locate, ObjectRepo, Scope } from './objects';
 
 let repo: ObjectRepo | undefined;
 
@@ -8,9 +8,9 @@ let repo: ObjectRepo | undefined;
  *   obj(page, 'login.forgotPasswordLink').click()
  * The repository is read once per process; the files are updated before the workers start (see core/keywords/autoUpdate.ts).
  */
-export function obj(page: Page, name: string): Locator {
+export function obj(scope: Scope, name: string): Locator {
   repo ??= loadObjects();
-  return locate(page, repo, name);
+  return locate(scope, repo, name);
 }
 
 export function resetObjectCache(): void {

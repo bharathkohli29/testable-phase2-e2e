@@ -3,7 +3,9 @@ import { closeMenus } from '../../core/pages/menus';
 import { apiGet, tenantOf } from '../../core/pages/runApi';
 import { CaseHandler } from '../../core/runner/registerCases';
 import { RepoPage } from '../repo/shared/RepoPage';
+import { obj as locatorOf } from '../../core/keywords/obj';
 
+import { expected as expectedOf } from '../../core/keywords/expected';
 /**
  * The Confidence Object module: every part of /confidence-engine?pillar=object (workspace overview) for the run that just finished.
  * Verified live. The page is read from its own text (locators / role names) and compared with the same data calls the page makes
@@ -38,7 +40,7 @@ async function read(page: Page): Promise<View> {
 }
 
 async function readOnce(page: Page): Promise<View> {
-  const t = (await page.locator('body').innerText()).split('\n').map((s) => s.trim()).filter(Boolean).join('|');
+  const t = (await locatorOf(page, 'object.css.body').innerText()).split('\n').map((s) => s.trim()).filter(Boolean).join('|');
   const m = (re: RegExp): RegExpMatchArray => t.match(re) ?? ([] as unknown as RegExpMatchArray);
   // the small captions under the tile figures ("in workspace", "validation pass rate", "failed validations") are optional
   const tiles = m(/(\d+|N\/A)\|Avg Confidence\|([^|]+)\|(\d+)\|Projects\|(?:in workspace\|)?(\d+)\|Validations\|(?:[^|%]*\|)?(\d+)\s*%\|Ship Rate\|(?:validation pass rate\|)?(\d+)\|Open Risks/i);
@@ -79,12 +81,12 @@ async function needObject(ctx: Parameters<CaseHandler<RepoPage>>[0]): Promise<vo
   if (!onEngine) ctx.skip('The Confidence Engine page of a finished run is not open (the Execution module did not get a run to its results), so the Confidence Object page cannot be opened.');
   await closeMenus(page);
   if (!/pillar=object/.test(page.url())) {
-    await page.locator('a[href*="/confidence-engine"][href*="pillar=object"]').first().click();
+    await locatorOf(page, 'object.css.a-href-confidence-engine-href-pillar').first().click();
     await page.waitForURL(/pillar=object/, { timeout: 30_000 }).catch(() => ctx.skip('Clicking "Confidence Object" did not open the Confidence Object page.'));
   }
-  await page.getByText(/^\s*Confidence Domains\s*$/i).first().waitFor({ state: 'visible', timeout: 30_000 })
+  await locatorOf(page, 'object.text.confidence-domains').first().waitFor({ state: 'visible', timeout: 30_000 })
     .catch(() => ctx.skip('The Confidence Object page did not show "Confidence Domains".'));
-  await page.getByText(/Page \d+ of \d+/).first().waitFor({ state: 'visible', timeout: 30_000 }).catch(() => undefined);
+  await locatorOf(page, 'object.text.page-of').first().waitFor({ state: 'visible', timeout: 30_000 }).catch(() => undefined);
 }
 
 export const objectSteps: Record<string, CaseHandler<RepoPage>> = {
@@ -93,7 +95,7 @@ export const objectSteps: Record<string, CaseHandler<RepoPage>> = {
     const { page, check, note, snap } = ctx;
     const id = runId(page);
     const q = new URL(page.url()).searchParams;
-    await snap('Confidence Object page: breadcrumb and branch run selector', page.getByRole('navigation', { name: 'Breadcrumb' }));
+    await snap('Confidence Object page: breadcrumb and branch run selector', locatorOf(page, 'object.navigation.breadcrumb'));
     await check('The address is /confidence-engine with pillar=object for the same run id', () => {
       expect(new URL(page.url()).pathname).toBe('/confidence-engine');
       expect(q.get('pillar')).toBe('object');
@@ -106,13 +108,13 @@ export const objectSteps: Record<string, CaseHandler<RepoPage>> = {
     });
     await check('The page is not sent to the login page', () => expect(page).not.toHaveURL(/\/auth\//));
     await check('The breadcrumb shows "Confidence Object" and the start of the run id', async () => {
-      await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toContainText(/confidence object/i);
-      expect(norm(await page.locator('body').innerText())).toMatch(new RegExp(`run\\s*${id.slice(0, 8)}`, 'i'));
+      await expect(locatorOf(page, 'object.navigation.breadcrumb')).toContainText(expectedOf('object.text.confidence-object'));
+      expect(norm(await locatorOf(page, 'object.css.body').innerText())).toMatch(new RegExp(`run\\s*${id.slice(0, 8)}`, 'i'));
     });
     await check('The "Branch run" selector shows the branch, the commit and the start of the run id', () =>
-      expect(page.getByRole('combobox', { name: 'Branch run' })).toContainText(new RegExp(`${esc((q.get('branch') ?? '').slice(0, 20))}.*[0-9a-f]{7}.*${id.slice(0, 8)}`, 'i')));
-    await check('"Back to Confidence Engine" is shown at the bottom', () => expect(page.getByRole('link', { name: /back to confidence engine/i }).first()).toBeVisible());
-    await check('No error message is shown', () => expect(page.getByText(/something went wrong|failed to load|unable to load/i)).toHaveCount(0));
+      expect(locatorOf(page, 'object.combobox.branch-run')).toContainText(new RegExp(`${esc((q.get('branch') ?? '').slice(0, 20))}.*[0-9a-f]{7}.*${id.slice(0, 8)}`, 'i')));
+    await check('"Back to Confidence Engine" is shown at the bottom', () => expect(locatorOf(page, 'object.link.back-to-confidence-engine').first()).toBeVisible());
+    await check('No error message is shown', () => expect(locatorOf(page, 'object.text.something-went-wrong-failed-to-load')).toHaveCount(0));
     note(`Run ${id}`);
   },
 
@@ -120,7 +122,7 @@ export const objectSteps: Record<string, CaseHandler<RepoPage>> = {
     await needObject(ctx);
     const { page, check, snap } = ctx;
     const id = runId(page);
-    await snap('Left menu and top links of the Confidence Object page', page.getByRole('navigation', { name: 'Workspace' }));
+    await snap('Left menu and top links of the Confidence Object page', locatorOf(page, 'object.navigation.workspace'));
     for (const [name, href] of [['Dashboard', '/dashboard'], ['Confidence Engine', '/confidence-engine'], ['Execution Assistant', '/execution-assistant'], ['Account and Plan', '/account']] as const) {
       await check(`Left menu link "${name}" is shown and goes to ${href}`, async () => {
         const link = page.getByRole('link', { name: new RegExp(`^\\s*${esc(name)}\\s*$`, 'i') }).first();
@@ -129,7 +131,7 @@ export const objectSteps: Record<string, CaseHandler<RepoPage>> = {
       });
     }
     await check('The executions meter ("Executions: used / limit") is shown, links to /account and used is not above the limit', async () => {
-      const meter = page.locator('a[href="/account"]').filter({ hasText: /Executions:\s*\d+\s*\/\s*\d+/ }).first();
+      const meter = locatorOf(page, 'object.css.a-href-account').filter({ hasText: /Executions:\s*\d+\s*\/\s*\d+/ }).first();
       await expect(meter).toBeVisible();
       const m = norm(await meter.innerText()).match(/Executions:\s*(\d+)\s*\/\s*(\d+)/)!;
       expect(num(m[1])).toBeLessThanOrEqual(num(m[2]));
@@ -146,18 +148,18 @@ export const objectSteps: Record<string, CaseHandler<RepoPage>> = {
       await check(`The "About ${name}" button is shown`, () => expect(page.getByRole('button', { name: new RegExp(`About ${esc(name)}`, 'i') }).first()).toBeVisible());
     }
     await check('"Closed-Loop Intel" is marked COMING SOON', () =>
-      expect(page.locator('a,div,button').filter({ hasText: /Closed.?Loop Intel/i }).filter({ hasText: /coming soon/i }).last()).toBeVisible());
+      expect(locatorOf(page, 'object.css.a-div-button').filter({ hasText: /Closed.?Loop Intel/i }).filter({ hasText: /coming soon/i }).last()).toBeVisible());
   },
 
   'OBJ-003': async (ctx) => {
     await needObject(ctx);
     const { page, check, snap } = ctx;
-    await snap('The question box and "Submit question" button', page.getByRole('textbox', { name: /ask a confidence question/i }));
-    await check('The question box "Ask a confidence question" is shown', () => expect(page.getByRole('textbox', { name: /ask a confidence question/i })).toBeVisible());
-    await check('"Submit question" is shown (it is not clicked)', () => expect(page.getByRole('button', { name: 'Submit question' })).toBeVisible());
-    await check('The chat still says the run is complete', () => anyShown(page.getByText(/run (is )?complete/i)));
+    await snap('The question box and "Submit question" button', locatorOf(page, 'object.textbox.ask-a-confidence-question'));
+    await check('The question box "Ask a confidence question" is shown', () => expect(locatorOf(page, 'object.textbox.ask-a-confidence-question')).toBeVisible());
+    await check('"Submit question" is shown (it is not clicked)', () => expect(locatorOf(page, 'object.button.submit-question')).toBeVisible());
+    await check('The chat still says the run is complete', () => anyShown(locatorOf(page, 'object.text.run-is-complete')));
     await check('"Analyze latest commit" is offered and enabled (it is not clicked)', async () => {
-      const analyze = page.getByRole('button', { name: /analy[sz]e latest commit/i }).first();
+      const analyze = locatorOf(page, 'object.button.analy-sz-e-latest-commit').first();
       await expect(analyze).toBeVisible();
       await expect(analyze).toBeEnabled();
     });
@@ -169,7 +171,7 @@ export const objectSteps: Record<string, CaseHandler<RepoPage>> = {
     const v = await read(page);
     const run = await apiGet(page, `/views-api/v1/runs/${runId(page)}/scores?tenant_id=${await tenantOf(page)}`);
     const apiScore = run.status === 200 ? num(run.json?.overall_score) : NaN;
-    await ctx.snap('The five tiles: Avg Confidence, Projects, Validations, Ship Rate, Open Risks', page.getByText(/^\s*Avg Confidence\s*$/i).first().locator('xpath=ancestor::*[contains(., "Open Risks")][1]'));
+    await ctx.snap('The five tiles: Avg Confidence, Projects, Validations, Ship Rate, Open Risks', locatorOf(locatorOf(page, 'object.text.avg-confidence').first(), 'object.css.xpath-ancestor-contains-open-risks-1'));
     note(`Tiles: Avg Confidence ${v.avg} ${v.rating}; Projects ${v.projects}; Validations ${v.validations}; Ship Rate ${v.shipRate}%; Open Risks ${v.openRisks}. This run's score (API): ${apiScore}.`);
     await check('The five tiles could be read (Avg Confidence, Projects, Validations, Ship Rate, Open Risks)', () => expect(v.tilesOk, 'the tiles text was not found on the page').toBe(true));
     await check('Avg Confidence is a number from 0 to 100 with a rating word (e.g. SHIP)', () => {
@@ -193,11 +195,11 @@ export const objectSteps: Record<string, CaseHandler<RepoPage>> = {
     await needObject(ctx);
     const { page, check, note } = ctx;
     const v = await read(page);
-    await ctx.snap('Confidence Domains: ORG score and the five domains', page.getByText(/^\s*Confidence Domains\s*$/i).first().locator('xpath=ancestor::*[contains(., "Compliance")][1]'));
+    await ctx.snap('Confidence Domains: ORG score and the five domains', locatorOf(locatorOf(page, 'object.text.confidence-domains').first(), 'object.css.xpath-ancestor-contains-compliance-1'));
     note(`ORG ${v.org}; ${DOMAINS.map((d, i) => `${d} ${v.domains[i]}`).join('; ')}`);
     await check('"Confidence Domains" and "Weighted accumulation → Org Score" are shown', async () => {
-      await anyShown(page.getByText(/^\s*Confidence Domains\s*$/i));
-      await anyShown(page.getByText(/Weighted accumulation/i));
+      await anyShown(locatorOf(page, 'object.text.confidence-domains'));
+      await anyShown(locatorOf(page, 'object.text.weighted-accumulation'));
     });
     await check('The ORG score is a number from 0 to 100', () => { expect(num(v.org)).toBeGreaterThanOrEqual(0); expect(num(v.org)).toBeLessThanOrEqual(100); });
     await check('The ORG score equals the Avg Confidence tile', () => expect(num(v.org), `ORG ${v.org}, tile ${v.avg}`).toBe(num(v.avg)));
@@ -213,14 +215,14 @@ export const objectSteps: Record<string, CaseHandler<RepoPage>> = {
     await needObject(ctx);
     const { page, check, note } = ctx;
     const v = await read(page);
-    await ctx.snap('The Whitebox Trend chart', page.getByText(/^\s*Whitebox Trend\s*$/i).first().locator('xpath=ancestor::*[.//svg][1]').or(page.getByText(/^\s*Whitebox Trend\s*$/i).first()).first());
+    await ctx.snap('The Whitebox Trend chart', locatorOf(locatorOf(page, 'object.text.whitebox-trend').first(), 'object.css.xpath-ancestor-svg-1').or(locatorOf(page, 'object.text.whitebox-trend').first()).first());
     note(`Trend header "${v.trendNote}"; marker "${v.wb} WB"; ${v.labels.length} labels.`);
-    await check('"Whitebox Trend" is shown', () => anyShown(page.getByText(/^\s*Whitebox Trend\s*$/i)));
+    await check('"Whitebox Trend" is shown', () => anyShown(locatorOf(page, 'object.text.whitebox-trend')));
     await check('The change figure reads like "N pts"', () => expect(v.trendNote).toMatch(/^[+\-−–]?\s*\d+(\.\d+)?\s*pts?$/i));
     await check('The vertical axis shows 100, 80, 60, 40, 20, 0', () => expect(v.trendOk, 'the axis values 100, 80, 60, 40, 20, 0 were not found under "Whitebox Trend"').toBe(true));
     await check('The Whitebox marker ("<n> WB") is a number from 0 to 100', () => { expect(v.wb).not.toBe(''); expect(num(v.wb)).toBeLessThanOrEqual(100); });
     await check('A drawn chart is shown (an SVG with at least one line or point)', () =>
-      expect(page.locator('svg path, svg circle, svg polyline').count()).resolves.toBeGreaterThan(5));
+      expect(locatorOf(page, 'object.css.svg-path-svg-circle-svg-polyline').count()).resolves.toBeGreaterThan(5));
     await check('The chart lists the same testing types as the "Testing Type" list below it', () => {
       expect(v.labels.length, 'no chart labels were read').toBeGreaterThan(0);
       // a label may be a shortened form of the testing type name, so one containing the other is the same type
@@ -236,10 +238,10 @@ export const objectSteps: Record<string, CaseHandler<RepoPage>> = {
     const { page, check, note } = ctx;
     const v = await read(page);
     const scores = v.types.map(([, s]) => s);
-    await ctx.snap('The Testing Type list with its scores', page.getByText(/^\s*Testing Type\s*$/i).first().locator('xpath=ancestor::*[contains(., "testing-type avg")][1]'));
+    await ctx.snap('The Testing Type list with its scores', locatorOf(locatorOf(page, 'object.text.testing-type').first(), 'object.css.xpath-ancestor-contains-testing-type'));
     note(`Testing Type: average ${v.ttAvg}; ${v.types.length} types: ${v.types.map(([n, s]) => `${n} ${s}`).join(', ')}`);
     await check('"Testing Type" is shown with at least one testing type', async () => {
-      await anyShown(page.getByText(/^\s*Testing Type\s*$/i));
+      await anyShown(locatorOf(page, 'object.text.testing-type'));
       expect(v.types.length).toBeGreaterThan(0);
     });
     await check('Every testing type has a score from 0 to 100', () => scores.forEach((s) => { expect(s).toBeGreaterThanOrEqual(0); expect(s).toBeLessThanOrEqual(100); }));
@@ -254,9 +256,9 @@ export const objectSteps: Record<string, CaseHandler<RepoPage>> = {
     const { page, check, note } = ctx;
     const v = await read(page);
     const w = await workspace(page);
-    await ctx.snap('Projects domain breakdown: the project cards and the page counter', page.getByText(/projects domain breakdown/i).first());
+    await ctx.snap('Projects domain breakdown: the project cards and the page counter', locatorOf(page, 'object.text.projects-domain-breakdown').first());
     note(`${v.cards.length} project cards; pager ${v.pager ? `Page ${v.pager.page} of ${v.pager.pages} · ${v.pager.total} projects` : '(not found)'}; projects API total ${w.ptotal}.`);
-    await check('"Projects domain breakdown" is shown', () => anyShown(page.getByText(/projects domain breakdown/i)));
+    await check('"Projects domain breakdown" is shown', () => anyShown(locatorOf(page, 'object.text.projects-domain-breakdown')));
     await check('The page counter reads "Page N of M · X projects"', () => expect(v.pager, 'no "Page N of M · X projects" text found').not.toBeNull());
     await check('The number of projects in the counter equals the "Projects" tile', () => expect(v.pager?.total).toBe(v.projects));
     await check('The number of projects equals the project list the page loads (runtime-api projects)', () => expect(v.projects, `projects API returned ${w.projects.length}`).toBe(w.projects.length));
@@ -293,7 +295,7 @@ export const objectSteps: Record<string, CaseHandler<RepoPage>> = {
     const { page, check, note } = ctx;
     const v = await read(page);
     const w = await workspace(page);
-    await ctx.snap('Projects domain breakdown: project cards with score and branch', page.getByText(/projects domain breakdown/i).first());
+    await ctx.snap('Projects domain breakdown: project cards with score and branch', locatorOf(page, 'object.text.projects-domain-breakdown').first());
     const nameOf = new Map(w.projects.map((p) => [p.id, p.name]));
     note(`Latest run per project (API): ${w.latest.map((r) => `${nameOf.get(r.project_id)} ${r.branch_name} ${r.overall_score === null ? 'N/A' : Math.round(num(r.overall_score))}`).join('; ')}`);
     const onePage = (v.pager?.pages ?? 1) <= 1;
@@ -327,7 +329,7 @@ export const objectSteps: Record<string, CaseHandler<RepoPage>> = {
         if (!(shown.length > 0 && r.branch_name.toLowerCase().startsWith(shown.toLowerCase()))) wrong.push(`${c?.name ?? nameOf.get(r.project_id)}: the card line says "${c?.sub ?? '(no card)'}" but the latest run in the API is on branch ${r.branch_name}`);
       }
       expect(wrong, 'cards whose branch differs from the latest run').toEqual([]);
-    }, page.getByText(/projects domain breakdown/i).first());
+    }, locatorOf(page, 'object.text.projects-domain-breakdown').first());
     await check('A project without a run is shown as NOT STARTED', () => {
       const withRun = new Set(w.latest.map((r) => nameOf.get(r.project_id)));
       for (const c of v.cards.filter((x) => !withRun.has(x.name))) expect(c.status, `${c.name}`).toBe('NOT STARTED');
@@ -341,7 +343,7 @@ export const objectSteps: Record<string, CaseHandler<RepoPage>> = {
     await needObject(ctx);
     const { page, check, note } = ctx;
     const v = await read(page);
-    await ctx.snap('Project cards with their status words, and the Avg Confidence tile', page.getByText(/projects domain breakdown/i).first());
+    await ctx.snap('Project cards with their status words, and the Avg Confidence tile', locatorOf(page, 'object.text.projects-domain-breakdown').first());
     const scored = v.cards.filter((c) => c.score !== 'N/A');
     const avgCards = scored.length ? scored.reduce((s, c) => s + num(c.score), 0) / scored.length : NaN;
     const ship = scored.filter((c) => c.status === 'SHIP').map((c) => num(c.score));
@@ -365,11 +367,11 @@ export const objectSteps: Record<string, CaseHandler<RepoPage>> = {
   'OBJ-011': async (ctx) => {
     await needObject(ctx);
     const { page, check } = ctx;
-    const about = page.getByRole('button', { name: /about confidence object/i }).first();
+    const about = locatorOf(page, 'object.button.about-confidence-object').first();
     await check('"About Confidence Object" is shown', () => expect(about).toBeVisible());
     await about.hover().catch(() => undefined);
     await check('"About Confidence Object" shows an explanation text when pointed at', async () => {
-      const tips = page.locator('[role="tooltip"], [data-slot="tooltip-content"], [data-radix-popper-content-wrapper], [role="dialog"], [role="status"]');
+      const tips = locatorOf(page, 'object.css.role-tooltip-data-slot-tooltip-conte');
       const title = norm((await about.getAttribute('title').catch(() => '')) ?? '');
       await expect.poll(async () => {
         if (title.length > 10) return true;   // a plain browser tooltip (title attribute) is an explanation text too
@@ -397,13 +399,13 @@ export const objectSteps: Record<string, CaseHandler<RepoPage>> = {
     page.on('response', onResponse);
     await ctx.step('Reload the page', async () => {
       await page.reload();
-      await page.getByText(/^\s*Confidence Domains\s*$/i).first().waitFor({ state: 'visible', timeout: 45_000 });
-      await page.getByText(/Page \d+ of \d+/).first().waitFor({ state: 'visible', timeout: 45_000 });
+      await locatorOf(page, 'object.text.confidence-domains').first().waitFor({ state: 'visible', timeout: 45_000 });
+      await locatorOf(page, 'object.text.page-of').first().waitFor({ state: 'visible', timeout: 45_000 });
     });
     // wait (poll) until the page has made its two data calls, instead of sleeping a fixed time
     await expect.poll(() => [...seen].some((x) => /\/projects$/.test(x)) && [...seen].some((x) => /latest-by-project/.test(x)), { timeout: 15_000 }).toBe(true).catch(() => undefined);
     page.off('response', onResponse);
-    await ctx.snap('Confidence Object page after the reload', page.getByText(/^\s*Avg Confidence\s*$/i).first().locator('xpath=ancestor::*[contains(., "Open Risks")][1]'));
+    await ctx.snap('Confidence Object page after the reload', locatorOf(locatorOf(page, 'object.text.avg-confidence').first(), 'object.css.xpath-ancestor-contains-open-risks-1'));
     const after = await read(page);
     note(`Data calls seen after the reload: ${[...seen].join(', ') || '(none)'}`);
     await check('The same run and page are shown after a reload', () => { expect(runId(page)).not.toBe(''); expect(page.url()).toContain('pillar=object'); });
@@ -422,7 +424,7 @@ export const objectSteps: Record<string, CaseHandler<RepoPage>> = {
     await needObject(ctx);
     const { page, check } = ctx;
     const id = runId(page);
-    const back = page.getByRole('link', { name: /back to confidence engine/i }).first();
+    const back = locatorOf(page, 'object.link.back-to-confidence-engine').first();
     await ctx.snap('The "Back to Confidence Engine" link', back);
     await check('"Back to Confidence Engine" is shown and goes to the engine page of this run', async () => {
       await expect(back).toBeVisible();
@@ -433,9 +435,9 @@ export const objectSteps: Record<string, CaseHandler<RepoPage>> = {
       await page.waitForURL(/pillar=engine/, { timeout: 20_000 });
     });
     await check('The Confidence Engine page is shown again for the same run', async () => {
-      await anyShown(page.getByText(/^\s*PR Confidence Analysis\s*$/i), 30_000);
+      await anyShown(locatorOf(page, 'object.text.pr-confidence-analysis'), 30_000);
       expect(runId(page)).toBe(id);
     });
-    await check('The scores are still there after coming back', () => anyShown(page.getByText(/^\s*Confidence Score\s*$/i), 20_000));
+    await check('The scores are still there after coming back', () => anyShown(locatorOf(page, 'object.text.confidence-score'), 20_000));
   },
 };

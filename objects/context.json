@@ -1,0 +1,13 @@
+{
+  "_comment": "Module context: locators moved out of the code (one entry per line). Keys are made from the role and text; rename them freely.",
+
+  "context.text.repository-ready": { "text": "repository ready", "match": "exact", "pick": "all" },
+  "context.button.details": { "role": "button", "name": "details", "match": "exact", "pick": "all" },
+  "context.dialog.item": { "role": "dialog", "pick": "all" },
+  "context.css.button": { "css": "button", "pick": "all" },
+  "context.css.xpath-ancestor-contains-1": { "css": "xpath=ancestor::*[contains(., \"·\")][1]", "pick": "all" },
+  "context.text.technical-details": { "text": "technical details", "match": "contains", "pick": "all" },
+  "context.button.repository-history": { "role": "button", "name": "repository history", "match": "contains", "pick": "all" },
+  "context.css.text-1-2-1-2-4-text-current-i-text-c": { "css": "text=/\\d{1,2}\\/\\d{1,2}\\/\\d{4}/, text=/current/i, text=/changed by/i", "pick": "all" },
+  "context.text.current": { "text": "current", "match": "exact", "pick": "all" }
+}

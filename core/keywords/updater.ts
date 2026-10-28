@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { ROOT } from '../paths';
 import { loadObjects, ObjectDef, OBJECTS_DIR } from './objects';
+import { loadExpected, EXPECTED_DIR } from './expected';
 import { lookup, readSiteText } from '../../scripts/checkLocators';
 
 /**
@@ -24,6 +25,7 @@ export interface UpdateOptions {
   ref: string;
   srcDir: string;
   objectsDir?: string;
+  expectedDir?: string;
   stateFile?: string;
   since?: string; // compare with this commit instead of the remembered one
   dry?: boolean; // report only: change no file, do not move the remembered commit
@@ -123,9 +125,9 @@ export function newTextFor(text: string, oldLine: string, newLine: string): { to
   return undefined;
 }
 
-interface Entry { object: string; file: string; text: string; def: ObjectDef; kind: 'text' | 'testid' }
+interface Entry { dir: string; object: string; file: string; text: string; def: ObjectDef; kind: 'text' | 'testid' }
 
-function entriesOf(dir: string): Entry[] {
+function entriesOf(dir: string, expDir: string): Entry[] {
   const repo = loadObjects(dir);
   const origin: Record<string, string> = {};
   for (const f of fs.readdirSync(dir).filter((x) => x.endsWith('.json') && x !== 'routes.json')) {
@@ -134,8 +136,19 @@ function entriesOf(dir: string): Entry[] {
   }
   const out: Entry[] = [];
   for (const [object, def] of Object.entries(repo)) {
-    for (const text of [...arr(def.name), ...arr(def.text), ...arr(def.placeholder), ...arr(def.label)]) out.push({ object, file: origin[object], text, def, kind: 'text' });
-    if (def.testid) out.push({ object, file: origin[object], text: def.testid, def, kind: 'testid' });
+    for (const text of [...arr(def.name), ...arr(def.text), ...arr(def.placeholder), ...arr(def.label)]) out.push({ dir, object, file: origin[object], text, def, kind: 'text' });
+    if (def.testid) out.push({ dir, object, file: origin[object], text: def.testid, def, kind: 'testid' });
+  }
+  // expected texts: exact texts and plain-word patterns can be updated; real patterns (with symbols) are written by people
+  if (fs.existsSync(expDir)) {
+    const exp = loadExpected(expDir);
+    const eorigin: Record<string, string> = {};
+    for (const f of fs.readdirSync(expDir).filter((x) => x.endsWith('.json'))) for (const k of Object.keys(JSON.parse(fs.readFileSync(path.join(expDir, f), 'utf8')))) eorigin[k] = f;
+    for (const [object, d] of Object.entries(exp)) {
+      const text = d.text ?? d.regex!;
+      if (d.regex !== undefined && !/^[A-Za-z0-9 ,':&-]+$/.test(text)) continue;
+      out.push({ dir: expDir, object: `expected:${object}`, file: `expected/${eorigin[object]}`, text, def: { match: 'exact' } as ObjectDef, kind: 'text' });
+    }
   }
   return out;
 }
@@ -179,7 +192,8 @@ export function updateObjects(o: UpdateOptions): UpdateResult {
 
   const hunks = parseDiff(git(o.site, ['diff', '-U0', '--no-color', '--no-ext-diff', since, commit, '--', o.srcDir, ...NOT_TESTS]));
   const now = readSiteText(o.site, commit, o.srcDir).text;
-  const entries = entriesOf(dir);
+  const expDir = o.expectedDir ?? EXPECTED_DIR;
+  const entries = entriesOf(dir, expDir);
   const backups = new Map<string, string>();
   const edits: Array<{ e: Entry; to: string }> = [];
 
@@ -215,12 +229,12 @@ export function updateObjects(o: UpdateOptions): UpdateResult {
   }
 
   if (!o.dry && edits.length) {
-    for (const f of new Set(edits.map((x) => x.e.file))) backups.set(f, fs.readFileSync(path.join(dir, f), 'utf8'));
+    for (const x of edits) { const full = path.join(x.e.dir, path.basename(x.e.file)); if (!backups.has(full)) backups.set(full, fs.readFileSync(full, 'utf8')); }
     try {
       for (const { e, to } of edits) {
-        const file = path.join(dir, e.file);
+        const file = path.join(e.dir, path.basename(e.file));
         const lines = fs.readFileSync(file, 'utf8').split('\n');
-        const key = `"${e.object}"`;
+        const key = `"${e.object.replace(/^expected:/, '')}"`;
         const i = lines.findIndex((l) => l.trimStart().startsWith(`${key}:`));
         if (i < 0) throw new Error(`entry ${key} not found in ${e.file}`);
         const from = JSON.stringify(e.text);
@@ -229,8 +243,9 @@ export function updateObjects(o: UpdateOptions): UpdateResult {
         fs.writeFileSync(file, lines.join('\n'));
       }
       loadObjects(dir); // must still be valid
+      if (fs.existsSync(expDir)) loadExpected(expDir);
     } catch (err) {
-      for (const [f, text] of backups) fs.writeFileSync(path.join(dir, f), text);
+      for (const [f, text] of backups) fs.writeFileSync(f, text);
       res.review.push(...res.changes.map((c) => ({ object: c.object, text: c.from, reason: `the edit was undone (${(err as Error).message})` })));
       res.changes = [];
     }

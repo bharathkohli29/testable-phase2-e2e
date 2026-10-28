@@ -1,0 +1,14 @@
+{
+  "signup.value.sample-org": {"text":"Sample Org"},
+  "signup.value.sample-person": {"text":"Sample Person"},
+  "signup.value.typed-only": {"text":"typed-only"},
+  "signup.attr.password": {"text":"password"},
+  "signup.attr.text": {"text":"text"},
+  "signup.value.visible1": {"text":"Visible1!"},
+  "signup.attr.blank": {"text":"_blank"},
+  "signup.attr.auth-login": {"regex":"\\/auth\\/login","flags":"i"},
+  "signup.attr.name": {"text":"name"},
+  "signup.attr.email": {"text":"email"},
+  "signup.attr.new-password": {"text":"new-password"},
+  "signup.text.organi-sz-ation": {"regex":"organi[sz]ation","flags":"i"}
+}

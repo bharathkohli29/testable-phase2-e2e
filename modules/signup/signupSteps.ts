@@ -3,7 +3,9 @@ import { CaseHandler } from '../../core/runner/registerCases';
 import { RepoPage } from '../repo/shared/RepoPage';
 import { Ctx } from '../flow/helpers';
 import { loose } from '../login/shared/text';
+import { obj as locatorOf } from '../../core/keywords/obj';
 
+import { expected as expectedOf } from '../../core/keywords/expected';
 /**
  * The Sign-up module: the Register page (/auth/Register). NOTHING here may create an account:
  *   - the module installs a guard on the browser context that ABORTS every request that is not a read (POST / PUT / PATCH / DELETE),
@@ -49,32 +51,32 @@ async function open(ctx: Ctx, type?: 'organisation' | 'individual'): Promise<voi
     await page.goto(url);
   }
   if (!/\/auth\/register/i.test(page.url())) ctx.skip(`The Register page did not open (the address is ${new URL(page.url()).pathname}).`);
-  await page.locator('#fullName').waitFor({ state: 'visible', timeout: 30_000 }).catch(() => ctx.skip('The sign-up form did not load.'));
+  await locatorOf(page, 'signup.css.fullname').waitFor({ state: 'visible', timeout: 30_000 }).catch(() => ctx.skip('The sign-up form did not load.'));
   ctx.focus(form(page)); // a failed or passed case without an element of its own is photographed on the sign-up form
   if (type) await choose(page, type);
 }
 
 /** Selects Organization / Individual by what the option SAYS (not by a hard-coded value) and returns the option's value. */
 async function choose(page: Page, type: 'organisation' | 'individual'): Promise<string> {
-  const sel = page.locator('#accountType');
+  const sel = locatorOf(page, 'signup.css.accounttype');
   const want = type === 'organisation' ? /organi[sz]ation/i : /individual/i;
-  const opts = await sel.locator('option').evaluateAll((os) => os.map((o) => ({ value: (o as HTMLOptionElement).value, text: o.textContent ?? '' })));
+  const opts = await locatorOf(sel, 'signup.css.option').evaluateAll((os) => os.map((o) => ({ value: (o as HTMLOptionElement).value, text: o.textContent ?? '' })));
   const hit = opts.find((o) => want.test(o.text)) ?? opts.find((o) => want.test(o.value));
   const value = hit?.value ?? type;
   await sel.selectOption(value);
   return value;
 }
 
-const form = (page: Page) => page.locator('form').first();
+const form = (page: Page) => locatorOf(page, 'signup.css.form').first();
 const formText = async (page: Page): Promise<string> => norm(await form(page).innerText());
-const submit = (page: Page) => form(page).getByRole('button', { name: 'Create Account' });
-const orgBox = (page: Page) => page.locator('#organisationName');
+const submit = (page: Page) => locatorOf(form(page), 'signup.button.create-account');
+const orgBox = (page: Page) => locatorOf(page, 'signup.css.organisationname');
 
 async function put(page: Page, v: { org?: string; name?: string; email?: string; pw?: string }): Promise<void> {
   if (v.org !== undefined && (await orgBox(page).isVisible())) await orgBox(page).fill(v.org);
-  if (v.name !== undefined) await page.locator('#fullName').fill(v.name);
-  if (v.email !== undefined) await page.locator('#workEmail').fill(v.email);
-  if (v.pw !== undefined) await page.locator('#password').fill(v.pw);
+  if (v.name !== undefined) await locatorOf(page, 'signup.css.fullname').fill(v.name);
+  if (v.email !== undefined) await locatorOf(page, 'signup.css.workemail').fill(v.email);
+  if (v.pw !== undefined) await locatorOf(page, 'signup.css.password').fill(v.pw);
 }
 
 /** Press Create Account and let the page react. */
@@ -113,29 +115,29 @@ export const signupSteps: Record<string, CaseHandler<RepoPage>> = {
       await page.evaluate(() => { try { localStorage.clear(); sessionStorage.clear(); } catch { /* ignore */ } }).catch(() => undefined);
       await page.goto(new URL('/auth/login', ctx.input.baseUrl).toString());
     }
-    await check('The login page shows a "Register" link', () => expect(page.getByRole('link', { name: /register/i }).first()).toBeVisible());
-    await page.getByRole('link', { name: /register/i }).first().click().catch(() => undefined);
+    await check('The login page shows a "Register" link', () => expect(locatorOf(page, 'signup.link.register').first()).toBeVisible());
+    await locatorOf(page, 'signup.link.register').first().click().catch(() => undefined);
     await check('Clicking "Register" opens the sign-up page (/auth/Register)', () => expect(page).toHaveURL(/\/auth\/register/i));
-    await page.locator('#fullName').waitFor({ state: 'visible', timeout: 20_000 }).catch(() => undefined);
+    await locatorOf(page, 'signup.css.fullname').waitFor({ state: 'visible', timeout: 20_000 }).catch(() => undefined);
     await check('The browser title contains "Testable"', () => expect(page).toHaveTitle(/testable/i));
-    await check('The heading "Create Account" is shown', () => expect(page.getByText(/^\s*create account\s*$/i).first()).toBeVisible());
-    await check('The sub-heading "Start shipping better code in under a minute" is shown', () => expect(page.getByText(/start shipping better code in under a minute/i).first()).toBeVisible());
-    await check('The product panel "Ship with confidence." is shown', () => expect(page.getByText(/ship with confidence/i).first()).toBeVisible());
-    await check('"Already have an account?" is shown', () => expect(page.getByText(/already have an account/i).first()).toBeVisible());
-    await check('The legal line "By signing up, you agree to our Terms and Privacy Policy" is shown', () => expect(page.getByText(/by signing up,? you agree to our/i).first()).toBeVisible());
+    await check('The heading "Create Account" is shown', () => expect(locatorOf(page, 'signup.text.create-account').first()).toBeVisible());
+    await check('The sub-heading "Start shipping better code in under a minute" is shown', () => expect(locatorOf(page, 'signup.text.start-shipping-better-code-in-under').first()).toBeVisible());
+    await check('The product panel "Ship with confidence." is shown', () => expect(locatorOf(page, 'signup.text.ship-with-confidence').first()).toBeVisible());
+    await check('"Already have an account?" is shown', () => expect(locatorOf(page, 'signup.text.already-have-an-account').first()).toBeVisible());
+    await check('The legal line "By signing up, you agree to our Terms and Privacy Policy" is shown', () => expect(locatorOf(page, 'signup.text.by-signing-up-you-agree-to-our').first()).toBeVisible());
     note(`Opened ${new URL(page.url()).pathname}`);
   },
 
   'SUP-002': async (ctx) => {
     await open(ctx);
     const { page, check, note } = ctx;
-    const sel = page.locator('#accountType');
+    const sel = locatorOf(page, 'signup.css.accounttype');
     await check('The account type selector is shown and enabled', async () => { await expect(sel).toBeVisible(); await expect(sel).toBeEnabled(); });
-    const options = (await sel.locator('option').allInnerTexts()).map(norm);
+    const options = (await locatorOf(sel, 'signup.css.option').allInnerTexts()).map(norm);
     note(`Account type options: ${options.join(' | ')}`);
     await check('The options are "Select account type", "Organization" and "Individual" (nothing else)', () =>
       expect(options.map((o) => o.toLowerCase().replace(/[^a-z]/g, '').replace('organisation', 'organization'))).toEqual(['selectaccounttype', 'organization', 'individual']));
-    await check('"Organization" is selected when the page opens', async () => expect(norm(await sel.locator('option:checked').innerText())).toMatch(/organi[sz]ation/i));
+    await check('"Organization" is selected when the page opens', async () => expect(norm(await locatorOf(sel, 'signup.css.option-checked').innerText())).toMatch(/organi[sz]ation/i));
     await check('Choosing "Individual" and then "Organization" works', async () => {
       const ind = await choose(page, 'individual');
       await expect(sel).toHaveValue(ind);
@@ -160,10 +162,10 @@ export const signupSteps: Record<string, CaseHandler<RepoPage>> = {
     }
     await check('Typed text is accepted in every box', async () => {
       await put(page, { org: 'Sample Org', name: 'Sample Person', email: FAKE_EMAIL(), pw: 'typed-only' });
-      await expect(page.locator('#organisationName')).toHaveValue('Sample Org');
-      await expect(page.locator('#fullName')).toHaveValue('Sample Person');
-      await expect(page.locator('#workEmail')).not.toHaveValue('');
-      await expect(page.locator('#password')).toHaveValue('typed-only');
+      await expect(locatorOf(page, 'signup.css.organisationname')).toHaveValue(expectedOf('signup.value.sample-org'));
+      await expect(locatorOf(page, 'signup.css.fullname')).toHaveValue(expectedOf('signup.value.sample-person'));
+      await expect(locatorOf(page, 'signup.css.workemail')).not.toHaveValue('');
+      await expect(locatorOf(page, 'signup.css.password')).toHaveValue(expectedOf('signup.value.typed-only'));
     });
     await check('The "Create Account" button is shown and enabled', async () => { await expect(submit(page)).toBeVisible(); await expect(submit(page)).toBeEnabled(); });
   },
@@ -276,15 +278,15 @@ export const signupSteps: Record<string, CaseHandler<RepoPage>> = {
   'SUP-010': async (ctx) => {
     await open(ctx, 'organisation');
     const { page, check, step } = ctx;
-    const pw = page.locator('#password');
+    const pw = locatorOf(page, 'signup.css.password');
     await pw.fill('Visible1!');
-    await check('The password is hidden at first (type=password)', () => expect(pw).toHaveAttribute('type', 'password'));
-    await check('The eye button is named "Show password"', () => expect(page.getByRole('button', { name: /show\s*password/i }).first()).toBeVisible());
-    await step('Click the eye button', () => page.getByRole('button', { name: /show\s*password/i }).first().click());
-    await check('After the click the password is readable (type=text) with the same text', async () => { await expect(pw).toHaveAttribute('type', 'text'); await expect(pw).toHaveValue('Visible1!'); });
-    await check('The eye button is now named "Hide password"', () => expect(page.getByRole('button', { name: /hide\s*password/i }).first()).toBeVisible());
-    await step('Click the eye button again', () => page.getByRole('button', { name: /hide\s*password/i }).first().click());
-    await check('Clicking again hides the password again', () => expect(pw).toHaveAttribute('type', 'password'));
+    await check('The password is hidden at first (type=password)', () => expect(pw).toHaveAttribute('type', expectedOf('signup.attr.password')));
+    await check('The eye button is named "Show password"', () => expect(locatorOf(page, 'signup.button.show-password').first()).toBeVisible());
+    await step('Click the eye button', () => locatorOf(page, 'signup.button.show-password').first().click());
+    await check('After the click the password is readable (type=text) with the same text', async () => { await expect(pw).toHaveAttribute('type', expectedOf('signup.attr.text')); await expect(pw).toHaveValue(expectedOf('signup.value.visible1')); });
+    await check('The eye button is now named "Hide password"', () => expect(locatorOf(page, 'signup.button.hide-password').first()).toBeVisible());
+    await step('Click the eye button again', () => locatorOf(page, 'signup.button.hide-password').first().click());
+    await check('Clicking again hides the password again', () => expect(pw).toHaveAttribute('type', expectedOf('signup.attr.password')));
   },
 
   'SUP-011': async (ctx) => {
@@ -346,11 +348,11 @@ export const signupSteps: Record<string, CaseHandler<RepoPage>> = {
       });
     }
     await check('The "Sign up with SSO" button is shown and enabled (not clicked)', async () => {
-      await expect(page.getByRole('button', { name: /sign up with sso/i })).toBeVisible();
-      await expect(page.getByRole('button', { name: /sign up with sso/i })).toBeEnabled();
+      await expect(locatorOf(page, 'signup.button.sign-up-with-sso')).toBeVisible();
+      await expect(locatorOf(page, 'signup.button.sign-up-with-sso')).toBeEnabled();
     });
-    await check('The "or" divider separates the buttons from the form', () => expect(page.getByText(/^or$/i).first()).toBeVisible());
-    const github = await page.getByRole('button', { name: 'GitHub' }).count();
+    await check('The "or" divider separates the buttons from the form', () => expect(locatorOf(page, 'signup.text.or').first()).toBeVisible());
+    const github = await locatorOf(page, 'signup.button.github').count();
     note(github ? 'A GitHub sign-up button IS offered.' : 'No GitHub sign-up button is offered (only Google, Microsoft and SSO), unlike the login page.');
   },
 
@@ -359,8 +361,8 @@ export const signupSteps: Record<string, CaseHandler<RepoPage>> = {
     const { page, check, step } = ctx;
     const providers: Array<[string, string, string]> = [['Okta', 'okta.com', 'Okta'], ['Azure AD', 'azure.microsoft.com', 'Azure AD'], ['OneLogin', 'onelogin.com', 'OneLogin'], ['Auth0', 'auth0.com', 'Auth0']];
     const provider = (name: string) => page.getByRole('option', { name: new RegExp(`^\\s*${name}`, 'i') }).or(page.getByRole('button', { name: new RegExp(`^\\s*${name}`, 'i') }));
-    await check('Before opening, the SSO providers are not listed', () => expect(page.getByText(/okta\.com/i).first()).toBeHidden());
-    await step('Click "Sign up with SSO"', () => page.getByRole('button', { name: /sign up with sso/i }).click());
+    await check('Before opening, the SSO providers are not listed', () => expect(locatorOf(page, 'signup.text.okta-com').first()).toBeHidden());
+    await step('Click "Sign up with SSO"', () => locatorOf(page, 'signup.button.sign-up-with-sso').click());
     for (const [name, domain] of providers) {
       await check(`"${name}" is listed with "${domain}"`, async () => {
         const b = provider(name).first();
@@ -369,7 +371,7 @@ export const signupSteps: Record<string, CaseHandler<RepoPage>> = {
       });
     }
     for (const [name, , label] of providers) {
-      if (!(await provider(name).count())) await page.getByRole('button', { name: /sign up with sso/i }).click().catch(() => undefined);
+      if (!(await provider(name).count())) await locatorOf(page, 'signup.button.sign-up-with-sso').click().catch(() => undefined);
       await provider(name).first().click().catch(() => undefined);
       await check(`Choosing "${name}" shows a "Continue with ${label}" button (not clicked)`, () => expect(page.getByRole('button', { name: loose(`Continue with ${label}`) }).first()).toBeVisible());
     }
@@ -385,7 +387,7 @@ export const signupSteps: Record<string, CaseHandler<RepoPage>> = {
         const a = page.getByRole('link', { name: loose(name, { exact: true }) }).first();
         await expect(a).toBeVisible();
         await expect(a).toHaveAttribute('href', new RegExp(`^https://(www\\.)?testable\\.io/${path}`, 'i'));
-        await expect(a).toHaveAttribute('target', '_blank');
+        await expect(a).toHaveAttribute('target', expectedOf('signup.attr.blank'));
         expect(((await a.getAttribute('rel')) ?? '').toLowerCase()).toContain('noopener');
       });
     }
@@ -394,17 +396,17 @@ export const signupSteps: Record<string, CaseHandler<RepoPage>> = {
   'SUP-016': async (ctx) => {
     await open(ctx);
     const { page, check, step } = ctx;
-    const signIn = page.getByRole('link', { name: /^\s*sign\s*in\s*$/i }).first();
+    const signIn = locatorOf(page, 'signup.link.sign-in').first();
     await check('"Sign in" link is shown and goes to /auth/login', async () => {
       await expect(signIn).toBeVisible();
-      await expect(signIn).toHaveAttribute('href', /\/auth\/login/i);
+      await expect(signIn).toHaveAttribute('href', expectedOf('signup.attr.auth-login'));
     });
     await step('Click "Sign in"', () => signIn.click());
     await check('Clicking it opens the login page ("Welcome Back,")', async () => {
       await expect(page).toHaveURL(/\/auth\/login/i);
-      await expect(page.getByText(/welcome back/i).first()).toBeVisible();
+      await expect(locatorOf(page, 'signup.text.welcome-back').first()).toBeVisible();
     });
-    await check('The login page offers "Register" again', () => expect(page.getByRole('link', { name: /register/i }).first()).toBeVisible());
+    await check('The login page offers "Register" again', () => expect(locatorOf(page, 'signup.link.register').first()).toBeVisible());
   },
 
   'SUP-017': async (ctx) => {
@@ -427,14 +429,14 @@ export const signupSteps: Record<string, CaseHandler<RepoPage>> = {
   'SUP-018': async (ctx) => {
     await open(ctx, 'organisation');
     const { page, check } = ctx;
-    await check('Full name asks the browser for autocomplete "name"', () => expect(page.locator('#fullName')).toHaveAttribute('autocomplete', 'name'));
+    await check('Full name asks the browser for autocomplete "name"', () => expect(locatorOf(page, 'signup.css.fullname')).toHaveAttribute('autocomplete', expectedOf('signup.attr.name')));
     await check('Email asks for autocomplete "email" and is an e-mail box', async () => {
-      await expect(page.locator('#workEmail')).toHaveAttribute('autocomplete', 'email');
-      await expect(page.locator('#workEmail')).toHaveAttribute('type', 'email');
+      await expect(locatorOf(page, 'signup.css.workemail')).toHaveAttribute('autocomplete', expectedOf('signup.attr.email'));
+      await expect(locatorOf(page, 'signup.css.workemail')).toHaveAttribute('type', expectedOf('signup.attr.email'));
     });
     await check('Password asks for autocomplete "new-password" and is hidden', async () => {
-      await expect(page.locator('#password')).toHaveAttribute('autocomplete', 'new-password');
-      await expect(page.locator('#password')).toHaveAttribute('type', 'password');
+      await expect(locatorOf(page, 'signup.css.password')).toHaveAttribute('autocomplete', expectedOf('signup.attr.new-password'));
+      await expect(locatorOf(page, 'signup.css.password')).toHaveAttribute('type', expectedOf('signup.attr.password'));
     });
     attempts.length = 0;
     const email = FAKE_EMAIL();
@@ -453,7 +455,7 @@ export const signupSteps: Record<string, CaseHandler<RepoPage>> = {
     const { page, check } = ctx;
     attempts.length = 0;
     await check('Tab order inside the form is Account type → Organization name → Full name → Work email → Password', async () => {
-      await page.locator('#accountType').focus();
+      await locatorOf(page, 'signup.css.accounttype').focus();
       const order: string[] = [];
       for (let i = 0; i < 4; i++) {
         await page.keyboard.press('Tab');
@@ -462,7 +464,7 @@ export const signupSteps: Record<string, CaseHandler<RepoPage>> = {
       expect(order.slice(0, 4)).toEqual(['organisationName', 'fullName', 'workEmail', 'password']);
     });
     await check('Pressing Enter in the Password box submits the form (the "required" messages appear)', async () => {
-      await page.locator('#password').focus();
+      await locatorOf(page, 'signup.css.password').focus();
       await page.keyboard.press('Enter');
       await expect.poll(async () => formText(page), { timeout: 10_000 }).toMatch(loose('Full name is required'));
     });
@@ -476,14 +478,14 @@ export const signupSteps: Record<string, CaseHandler<RepoPage>> = {
     await put(page, { name: 'Sample Person', email: FAKE_EMAIL(), pw: 'Typed1!value' });
     await send(page);
     await page.reload();
-    await page.locator('#fullName').waitFor({ state: 'visible', timeout: 20_000 }).catch(() => undefined);
+    await locatorOf(page, 'signup.css.fullname').waitFor({ state: 'visible', timeout: 20_000 }).catch(() => undefined);
     await check('After a reload the boxes are empty again (nothing typed is kept)', async () => {
-      await expect(page.locator('#fullName')).toHaveValue('');
-      await expect(page.locator('#workEmail')).toHaveValue('');
-      await expect(page.locator('#password')).toHaveValue('');
+      await expect(locatorOf(page, 'signup.css.fullname')).toHaveValue('');
+      await expect(locatorOf(page, 'signup.css.workemail')).toHaveValue('');
+      await expect(locatorOf(page, 'signup.css.password')).toHaveValue('');
     });
     await check('After a reload no old error message is shown', async () => expect(await formText(page)).not.toMatch(/is required|must be|valid email/i));
-    await check('After a reload the account type is "Organization" again', () => expect(page.locator('#accountType option:checked')).toHaveText(/organi[sz]ation/i));
+    await check('After a reload the account type is "Organization" again', () => expect(locatorOf(page, 'signup.css.accounttype-option-checked')).toHaveText(expectedOf('signup.text.organi-sz-ation')));
     await sentNothing(check);
   },
 };

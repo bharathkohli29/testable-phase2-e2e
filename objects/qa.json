@@ -1,0 +1,13 @@
+{
+  "_comment": "Module qa: locators moved out of the code (one entry per line). Keys are made from the role and text; rename them freely.",
+
+  "qa.css.article": { "css": "article", "pick": "all" },
+  "qa.button.ask-ai": { "role": "button", "name": "ask ai", "match": "contains", "pick": "all" },
+  "qa.link.ask-ai": { "role": "link", "name": "ask ai", "match": "contains", "pick": "all" },
+  "qa.css.header": { "css": "header", "pick": "all" },
+  "qa.searchbox.item": { "role": "searchbox", "pick": "all" },
+  "qa.placeholder.search": { "placeholder": "search", "match": "contains", "pick": "all" },
+  "qa.css.role-option-role-listitem-a-class-re": { "css": "[role=option], [role=listitem] a, [class*=result] a", "pick": "all" },
+  "qa.checkbox.item": { "role": "checkbox", "pick": "all" },
+  "qa.button.subscribe": { "role": "button", "name": "subscribe", "match": "contains", "pick": "all" }
+}

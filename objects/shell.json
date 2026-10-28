@@ -1,0 +1,11 @@
+{
+  "_comment": "Module shell: locators moved out of the code (one entry per line). Keys are made from the role and text; rename them freely.",
+
+  "shell.button.sign-out": { "role": "button", "name": "Sign out", "match": "playwright", "exact": true, "pick": "all" },
+  "shell.css.emailorusername": { "css": "#emailOrUsername", "pick": "all" },
+  "shell.css.password": { "css": "#password", "pick": "all" },
+  "shell.css.button-type-submit": { "css": "button[type=\"submit\"]", "pick": "all" },
+  "shell.alertdialog.item": { "role": "alertdialog", "pick": "all" },
+  "shell.css.role-menu": { "css": "[role=\"menu\"]", "pick": "all" },
+  "shell.css.a-div-button": { "css": "a,div,button", "pick": "all" }
+}

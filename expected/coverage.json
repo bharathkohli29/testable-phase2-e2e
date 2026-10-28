@@ -1,0 +1,10 @@
+{
+  "coverage.text.failed": {"regex":"failed","flags":"i"},
+  "coverage.text.ago-just-now-today-yesterday": {"regex":"ago|just now|today|yesterday|second|minute|hour|day|week|month","flags":"i"},
+  "coverage.text.n-a-not-detected": {"regex":"^\\s*(-|—|n\\/a|not detected)?\\s*$","flags":"i"},
+  "coverage.text.analysis-areas-that-aren-t": {"regex":"Analysis areas that aren.t currently available for this repository","flags":"i"},
+  "coverage.text.limited-coverage": {"regex":"Limited coverage","flags":"i"},
+  "coverage.text.platform-gap-not-a-defect": {"regex":"platform gap,?\\s*not a defect in this repository","flags":"i"},
+  "coverage.text.1-branch": {"regex":"1\\s+branch","flags":"i"},
+  "coverage.text.continue-to-build-the-run": {"regex":"continue to build the run plan,?\\s*or change the branch first","flags":"i"}
+}

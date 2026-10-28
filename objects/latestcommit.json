@@ -1,0 +1,24 @@
+{
+  "_comment": "Module latestcommit: locators moved out of the code (one entry per line). Keys are made from the role and text; rename them freely.",
+
+  "latestcommit.css.body": { "css": "body", "pick": "all" },
+  "latestcommit.button.refresh": { "role": "button", "name": "refresh", "match": "exact", "pick": "all" },
+  "latestcommit.button.analy-sz-e-latest-commit": { "role": "button", "name": "analy[sz]e latest commit", "match": "regex", "pick": "all" },
+  "latestcommit.text.already-analy-sz-ed": { "text": "already analy[sz]ed", "match": "regex", "pick": "all" },
+  "latestcommit.css.xpath-ancestor-button-normalize-spac": { "css": "xpath=ancestor::*[.//button[normalize-space()=\"Analyze latest commit\"]][1]", "pick": "all" },
+  "latestcommit.text.already-analyzed-newer-tip-new-commi": { "text": "already analyzed|newer tip|new commit", "match": "regex", "pick": "all" },
+  "latestcommit.text.white-box-analysis-is-underway": { "text": "White Box Analysis is underway", "match": "contains", "pick": "all" },
+  "latestcommit.text.couldn-t-start-the-run": { "text": "Couldn.t start the run", "match": "regex", "pick": "all" },
+  "latestcommit.button.open-confidence-engine": { "role": "button", "name": "open confidence engine", "match": "contains", "pick": "all" },
+  "latestcommit.combobox.branch-run": { "role": "combobox", "name": "branch run", "match": "contains", "pick": "all" },
+  "latestcommit.text.executing-running-in-progress-underw": { "text": "executing|running|in progress|underway", "match": "regex", "pick": "all" },
+  "latestcommit.button.cancel": { "role": "button", "name": "cancel", "match": "contains", "pick": "all" },
+  "latestcommit.button.execution-status": { "role": "button", "name": "Execution Status", "match": "contains", "pick": "all" },
+  "latestcommit.text.run-complete": { "text": "Run complete", "match": "contains", "pick": "all" },
+  "latestcommit.button.refresh-2": { "role": "button", "name": "^refresh", "match": "regex", "pick": "all" },
+  "latestcommit.css.a-href-confidence-engine-href-pillar": { "css": "a[href*=\"/confidence-engine\"][href*=\"pillar=object\"]", "pick": "all" },
+  "latestcommit.css.a-href-confidence-engine-href-pillar-2": { "css": "a[href*=\"/confidence-engine\"][href*=\"pillar=graph\"]", "pick": "all" },
+  "latestcommit.css.a-href-dashboard": { "css": "a[href=\"/dashboard\"]", "pick": "all" },
+  "latestcommit.css.tbody-tr": { "css": "tbody tr", "pick": "all" },
+  "latestcommit.css.td": { "css": "td", "pick": "all" }
+}

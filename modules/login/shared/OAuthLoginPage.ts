@@ -1,4 +1,5 @@
 import { Locator, Page, Request } from '@playwright/test';
+import { obj as locatorOf } from '../../../core/keywords/obj';
 
 /**
  * Base for the "Sign in with <Google|Microsoft|GitHub>" buttons on /auth/login.
@@ -18,7 +19,7 @@ export abstract class OAuthLoginPage {
     this.baseUrl = baseUrl;
     this.providerName = providerName;
     this.button = page.getByRole('button', { name: `Sign in with ${providerName}` });
-    this.heading = page.getByRole('heading', { level: 1 });
+    this.heading = locatorOf(page, 'login.heading.item-2');
   }
 
   async open(): Promise<void> {

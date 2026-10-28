@@ -2,6 +2,7 @@ import { expect } from '@playwright/test';
 import { AppShell } from '../../../core/pages/AppShell';
 import { CaseHandler } from '../../../core/runner/registerCases';
 import { OAuthLoginPage } from './OAuthLoginPage';
+import { obj as locatorOf } from '../../../core/keywords/obj';
 
 export interface OAuthCaseIds {
   button: string;
@@ -30,7 +31,7 @@ export function oauthHandlers<P extends OAuthLoginPage>(ids: OAuthCaseIds): Reco
       await check('Button is enabled', () => expect(pg.button).toBeEnabled());
       await check(`Accessible name is "Sign in with ${pg.providerName}"`, () => expect(pg.button).toHaveAccessibleName(`Sign in with ${pg.providerName}`));
       await check(`Button text contains "${pg.providerName}"`, () => expect(pg.button).toContainText(pg.providerName));
-      await check('Button shows an icon', () => expect(pg.button.locator('svg, img').first()).toBeVisible());
+      await check('Button shows an icon', () => expect(locatorOf(pg.button, 'login.css.svg-img').first()).toBeVisible());
     },
 
     [ids.redirect]: async ({ pg, data, check, step, note }) => {

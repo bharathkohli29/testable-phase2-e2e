@@ -1,4 +1,5 @@
 import { expect, Locator, Page } from '@playwright/test';
+import { obj as locatorOf } from '../keywords/obj';
 
 /**
  * The signed-in application frame (sidebar etc.). Shared by every module that needs to know
@@ -12,7 +13,7 @@ export class AppShell {
   constructor(page: Page, baseUrl: string) {
     this.page = page;
     this.baseUrl = baseUrl;
-    this.signOutButton = page.getByRole('button', { name: 'Sign out', exact: true }).first();
+    this.signOutButton = locatorOf(page, 'shell.button.sign-out').first();
   }
 
   async goto(pathname: string): Promise<void> {
@@ -22,9 +23,9 @@ export class AppShell {
   /** Email/username + password sign-in through the login form (used as the precondition of every signed-in module). */
   async login(email: string, password: string): Promise<void> {
     await this.page.goto(`${this.baseUrl}/auth/login`);
-    await this.page.locator('#emailOrUsername').fill(email);
-    await this.page.locator('#password').fill(password);
-    await this.page.locator('button[type="submit"]').click();
+    await locatorOf(this.page, 'shell.css.emailorusername').fill(email);
+    await locatorOf(this.page, 'shell.css.password').fill(password);
+    await locatorOf(this.page, 'shell.css.button-type-submit').click();
     await this.expectAuthenticated();
   }
 
@@ -38,6 +39,6 @@ export class AppShell {
 
   async signOut(): Promise<void> {
     await this.signOutButton.click();
-    await this.page.getByRole('alertdialog').getByRole('button', { name: 'Sign out', exact: true }).click();
+    await locatorOf(locatorOf(this.page, 'shell.alertdialog.item'), 'shell.button.sign-out').click();
   }
 }

@@ -3,7 +3,9 @@ import { BlockingFailure } from '../../../core/runner/checks';
 import { CaseHandler } from '../../../core/runner/registerCases';
 import { inputs } from '../../flow/helpers';
 import { RepoPage, ci, esc, has } from '../shared/RepoPage';
+import { obj as locatorOf } from '../../../core/keywords/obj';
 
+import { expected as expectedOf } from '../../../core/keywords/expected';
 /**
  * Steps 4-5 of the journey: the repository's Configure card (summary, branch chips, "Choose a branch" dialog, triggers),
  * "Choose another", and finally "Confirm repository" (which opens the Coverage preview + Review branches).
@@ -26,7 +28,7 @@ export const branchSteps: Record<string, CaseHandler<RepoPage>> = {
 
   'REPO-BRN-002': async (ctx) => {
     const { snap, pg, check, note } = ctx;
-    const defaultChip = pg.page.getByRole('radio', { name: /default\s*$/i }).last(); // last = the newest Configure card in the chat
+    const defaultChip = locatorOf(pg.page, 'repo.radio.default').last(); // last = the newest Configure card in the chat
     await check('Branch chips are offered (radio buttons)', () => expect(pg.chips.last()).toBeVisible());
     await check('One chip is marked "default"', () => expect(defaultChip).toBeVisible());
     await check('The default branch is the selected one at first', () => expect(defaultChip).toBeChecked());
@@ -43,17 +45,17 @@ export const branchSteps: Record<string, CaseHandler<RepoPage>> = {
     const { snap, pg, check } = ctx;
     const available = (await pg.summaryValue('Branches available').innerText()).trim();
     await pg.openBranchDialog();
-    await check('"Choose a branch" title is shown', () => expect(pg.branchDialog.getByText(/Choose a branch/i).first()).toBeVisible());
-    await check('It says "Select one branch to monitor · N available"', () => expect(pg.branchDialog.getByText(/Select one branch to monitor\s*·\s*\d+\s+available/i).first()).toBeVisible());
+    await check('"Choose a branch" title is shown', () => expect(locatorOf(pg.branchDialog, 'repo.text.choose-a-branch').first()).toBeVisible());
+    await check('It says "Select one branch to monitor · N available"', () => expect(locatorOf(pg.branchDialog, 'repo.text.select-one-branch-to-monitor-availab').first()).toBeVisible());
     await check('It has a "Search branches…" box', () => expect(pg.branchSearch).toBeVisible());
     await check(`The count in the chooser matches "Branches available" (${available})`, () =>
       expect(pg.branchDialog.getByText(new RegExp(`Select one branch to monitor\\s*·\\s*${available}\\s+available`, 'i')).first()).toBeVisible());
     await check('The default branch is ticked and tagged "default"', async () => {
-      await expect(pg.branchDialog.getByText(ci('default')).first()).toBeVisible();
+      await expect(locatorOf(pg.branchDialog, 'repo.text.default').first()).toBeVisible();
       // the rows may be radio buttons or checkboxes
-      await expect(pg.branchDialog.getByRole('radio').or(pg.branchDialog.getByRole('checkbox')).first()).toBeChecked();
+      await expect(locatorOf(pg.branchDialog, 'repo.radio.item').or(locatorOf(pg.branchDialog, 'repo.checkbox.item')).first()).toBeChecked();
     });
-    await check('Footer shows "<branch> selected"', () => expect(pg.branchDialog.getByText(/\sselected\s*$/i).first()).toBeVisible());
+    await check('Footer shows "<branch> selected"', () => expect(locatorOf(pg.branchDialog, 'repo.text.selected').first()).toBeVisible());
     await check('"Done" is shown', () => expect(pg.branchDone).toBeVisible());
     await snap('"Choose a branch" dialog is open', pg.branchDialog);
   },
@@ -72,8 +74,8 @@ export const branchSteps: Record<string, CaseHandler<RepoPage>> = {
     const fake = data.fake_branch || 'zz-no-such-branch-xyz';
     await pg.openBranchDialog();
     await pg.branchSearch.fill(fake);
-    await check(`Searching "${fake}" shows "No branches match …"`, () => expect(pg.branchDialog.getByText(/No branches match/i).first()).toBeVisible());
-    await snap('"No branches match" message', pg.branchDialog.getByText(/No branches match/i).first());
+    await check(`Searching "${fake}" shows "No branches match …"`, () => expect(locatorOf(pg.branchDialog, 'repo.text.no-branches-match').first()).toBeVisible());
+    await snap('"No branches match" message', locatorOf(pg.branchDialog, 'repo.text.no-branches-match').first());
     await pg.branchSearch.fill(''); // leave the list clean for the next step
   },
 
@@ -94,23 +96,23 @@ export const branchSteps: Record<string, CaseHandler<RepoPage>> = {
       await expect(pg.onPush).toBeVisible();
       await expect(pg.onPrMerge).toBeVisible();
     });
-    await check('"On push" is ticked by default', () => expect(pg.onPush).toHaveAttribute('aria-pressed', 'true'));
+    await check('"On push" is ticked by default', () => expect(pg.onPush).toHaveAttribute('aria-pressed', expectedOf('repo.attr.true')));
     await check('"On PR merge" can be ticked', () => pg.ensurePrMergeTicked());
     await check('Both triggers can be selected together ("On push" and "On PR merge" are both ticked)', async () => {
-      await expect(pg.onPush).toHaveAttribute('aria-pressed', 'true');
-      await expect(pg.onPrMerge).toHaveAttribute('aria-pressed', 'true');
+      await expect(pg.onPush).toHaveAttribute('aria-pressed', expectedOf('repo.attr.true'));
+      await expect(pg.onPrMerge).toHaveAttribute('aria-pressed', expectedOf('repo.attr.true'));
     });
     await snap('Both triggers ticked', [pg.onPush, pg.onPrMerge]);
     // "On PR merge" instead of "On push": untick On push, look, then put it back so the rest of the journey is unchanged
     await pg.onPush.click().catch(() => undefined);
     await check('"On PR merge" can be selected instead of "On push" (unticking "On push" leaves "On PR merge" ticked)', async () => {
-      await expect(pg.onPush).toHaveAttribute('aria-pressed', 'false');
-      await expect(pg.onPrMerge).toHaveAttribute('aria-pressed', 'true');
+      await expect(pg.onPush).toHaveAttribute('aria-pressed', expectedOf('repo.attr.false'));
+      await expect(pg.onPrMerge).toHaveAttribute('aria-pressed', expectedOf('repo.attr.true'));
     });
     if ((await pg.onPush.getAttribute('aria-pressed').catch(() => 'true')) !== 'true') await pg.onPush.click().catch(() => undefined);
     await check('"On push" is ticked again at the end (nothing was changed for the next steps)', async () => {
-      await expect(pg.onPush).toHaveAttribute('aria-pressed', 'true');
-      await expect(pg.onPrMerge).toHaveAttribute('aria-pressed', 'true');
+      await expect(pg.onPush).toHaveAttribute('aria-pressed', expectedOf('repo.attr.true'));
+      await expect(pg.onPrMerge).toHaveAttribute('aria-pressed', expectedOf('repo.attr.true'));
     });
   },
 
@@ -134,7 +136,7 @@ export const branchSteps: Record<string, CaseHandler<RepoPage>> = {
       // 2. If no alternate branch chip is visible on the card, check the "Choose a branch" dialog
       if (!branch2 && (await pg.moreBranches.isVisible().catch(() => false))) {
         await pg.openBranchDialog();
-        const dialogBranches = await pg.branchDialog.locator('[role="radio"], [role="checkbox"], label').evaluateAll((els) =>
+        const dialogBranches = await locatorOf(pg.branchDialog, 'repo.css.role-radio-role-checkbox-label').evaluateAll((els) =>
           els.map((el) => (el.textContent || '').replace(/\s*default\s*$/i, '').trim())
         ).catch(() => []);
 
@@ -175,15 +177,15 @@ export const branchSteps: Record<string, CaseHandler<RepoPage>> = {
     const { snap, pg, page, check } = ctx;
     const { repo, branch } = inputs(ctx, { repo: true, branches: 1 });
     await pg.chooseAnother.click();
-    await check('The "GitHub connected" card is shown again', () => expect(page.getByText(/GitHub connected/i).last()).toBeVisible({ timeout: 15_000 }));
-    await check('The table says "Showing 5 of N repositories"', () => expect(page.getByText(/Showing \d+ of \d+ repositories/).last()).toBeVisible());
+    await check('The "GitHub connected" card is shown again', () => expect(locatorOf(page, 'repo.text.github-connected').last()).toBeVisible({ timeout: 15_000 }));
+    await check('The table says "Showing 5 of N repositories"', () => expect(locatorOf(page, 'repo.text.showing-of-repositories').last()).toBeVisible());
     await check('The "Search all repositories…" box is shown', () => expect(pg.inlineSearch).toBeVisible());
     await check('The table of repositories is shown (repositories with their Public / Private visibility)', async () =>
-      expect(await page.getByText(/^\s*(Public|Private|Internal)\s*$/i).count()).toBeGreaterThanOrEqual(1));
+      expect(await locatorOf(page, 'repo.text.public-private-internal').count()).toBeGreaterThanOrEqual(1));
     const listed = await page.getByText(new RegExp(`^\\s*${esc(repo.split('/').pop() as string)}\\s*$`, 'i')).last().isVisible().catch(() => false);
     ctx.note(listed ? `"${repo}" is one of the 5 listed rows.` : `"${repo}" is not among the 5 listed rows (the list shows only the first 5 of all repositories; the search box and "View all" reach the rest).`);
     await check('"View all N repositories" is shown', () => expect(pg.viewAll).toBeVisible());
-    await snap('Repository table ("Showing 5 of N repositories")', page.getByText(/Showing \d+ of \d+ repositories/).last());
+    await snap('Repository table ("Showing 5 of N repositories")', locatorOf(page, 'repo.text.showing-of-repositories').last());
     // go back to the Configure card so the journey can continue
     await ctx.step(`Choose "${repo}" again`, () => pg.chooseRepo(repo));
     await ctx.step(`Select "${branch}" again`, () => pg.selectBranch(branch));
@@ -198,7 +200,7 @@ export const branchSteps: Record<string, CaseHandler<RepoPage>> = {
     await pg.ensurePrMergeTicked().catch(() => undefined);
     note(`Just before Confirm: "On push" ${await pg.onPush.getAttribute('aria-pressed') === 'true' ? 'ticked' : 'NOT ticked'}, "On PR merge" ${await pg.onPrMerge.getAttribute('aria-pressed') === 'true' ? 'ticked' : 'NOT ticked'}.`);
     await check('"Confirm repository" is enabled', () => expect(pg.confirmRepo).toBeEnabled());
-    ctx.focus(pg.confirmRepo.or(pg.reviewBranches).or(page.getByText(/configure repository/i).last())); // if Review branches does not appear, the picture shows the Confirm card (not the top of the page)
+    ctx.focus(pg.confirmRepo.or(pg.reviewBranches).or(locatorOf(page, 'repo.text.configure-repository').last())); // if Review branches does not appear, the picture shows the Confirm card (not the top of the page)
     await ctx.step('The "Review branches" card appears after Confirm', () => pg.confirmAndWaitForReview()); // refused / timeout => blocks the rest
     await snap('Review branches card after Confirm repository', pg.reviewBranches);
   },
@@ -213,7 +215,7 @@ export const branchSteps: Record<string, CaseHandler<RepoPage>> = {
     }
     await check('"Continue" is enabled', () => expect(pg.continueBtn).toBeEnabled());
     await ctx.step('"Continue" is clicked and the Run plan opens', () => pg.continueAndWaitForPlan());
-    await snap('Run plan opened after Continue', pg.page.getByText(/^\s*Run plan\s*$/i).last());
+    await snap('Run plan opened after Continue', locatorOf(pg.page, 'repo.text.run-plan').last());
     note('The Run plan itself is checked by the "Plan" sheet. "Execute run" is never clicked.');
   },
 };

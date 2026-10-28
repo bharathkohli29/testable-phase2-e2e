@@ -8,6 +8,7 @@ import { normalHandlers } from './normal/normalSteps';
 import { RepoPage } from '../repo/shared/RepoPage';
 import { adapt, Ctx } from '../flow/helpers';
 import { extraLoginSteps } from './normal/extraSteps';
+import { obj as locatorOf } from '../../core/keywords/obj';
 
 /**
  * Login part of the journey. Everything that can be checked BEFORE pressing "Authenticate" runs first (page, fields, validation,
@@ -36,7 +37,7 @@ const signIn: CaseHandler<RepoPage> = async (ctx) => {
     await pg.login(email, password);
     const left = await page.waitForURL((u) => !ANY_AUTH_URL.test(u.pathname), { timeout: 30_000 }).then(() => true, () => false);
     if (left) { last = ''; break; }
-    const temporary = await page.getByText(/unable to sign you in right now|try again in a few moments/i).first().isVisible().catch(() => false);
+    const temporary = await locatorOf(page, 'login.text.unable-to-sign-you-in-right-now-try').first().isVisible().catch(() => false);
     last = temporary ? 'the site said "unable to sign you in right now"' : ((await pg.formError.first().innerText().catch(() => '')) || 'the page stayed on the login screen').trim();
     if (!temporary) break;
     await page.waitForTimeout(15_000 * n);
@@ -64,7 +65,7 @@ const noCredentialsInUrl: CaseHandler<RepoPage> = async ({ page, data, input, ch
 const otherPages: CaseHandler<RepoPage> = async ({ page, data, input, check, note, snap }) => {
   const app = new AppShell(page, input.baseUrl);
   const listed = (data.paths ?? '').split(',').map((p) => p.trim()).filter(Boolean);
-  const hrefs = await page.locator('a[href^="/"]').evaluateAll((els) => els.map((e) => e.getAttribute('href') || ''));
+  const hrefs = await locatorOf(page, 'login.css.a-href').evaluateAll((els) => els.map((e) => e.getAttribute('href') || ''));
   const discovered = [...new Set(hrefs)]
     .filter((h) => h && h !== '/' && !/^\/auth\//i.test(h) && !listed.includes(h))
     .slice(0, Number(data.max_links || 3));
@@ -98,7 +99,7 @@ const signOut: CaseHandler<RepoPage> = async ({ page, input, check, step, snap }
   await step('Click Sign out and confirm', () => app.signOut());
   await check('After Sign out the browser is back on the login page', () => expect(page).toHaveURL(/\/auth\/login/i));
   await check('The signed-in app is no longer shown', () => app.expectNotAuthenticated());
-  await snap('Login page shown again after Sign out', page.getByRole('heading').first());
+  await snap('Login page shown again after Sign out', locatorOf(page, 'login.heading.item').first());
 };
 
 export const loginHandlers = {
