@@ -2,7 +2,7 @@ import { spawnSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { ROOT } from '../paths';
-import { loadObjects, ObjectDef, OBJECTS_DIR } from './objects';
+import { hasPlaceholder, loadObjects, ObjectDef, OBJECTS_DIR } from './objects';
 import { loadExpected, EXPECTED_DIR } from './expected';
 import { lookup, readSiteText } from '../../scripts/checkLocators';
 
@@ -136,7 +136,7 @@ function entriesOf(dir: string, expDir: string): Entry[] {
   }
   const out: Entry[] = [];
   for (const [object, def] of Object.entries(repo)) {
-    for (const text of [...arr(def.name), ...arr(def.text), ...arr(def.placeholder), ...arr(def.label)]) out.push({ dir, object, file: origin[object], text, def, kind: 'text' });
+    for (const text of [...arr(def.name), ...arr(def.text), ...arr(def.placeholder), ...arr(def.label)].filter((t) => !hasPlaceholder(t))) out.push({ dir, object, file: origin[object], text, def, kind: 'text' });
     if (def.testid) out.push({ dir, object, file: origin[object], text: def.testid, def, kind: 'testid' });
   }
   // expected texts: exact texts and plain-word patterns can be updated; real patterns (with symbols) are written by people
@@ -145,9 +145,12 @@ function entriesOf(dir: string, expDir: string): Entry[] {
     const eorigin: Record<string, string> = {};
     for (const f of fs.readdirSync(expDir).filter((x) => x.endsWith('.json'))) for (const k of Object.keys(JSON.parse(fs.readFileSync(path.join(expDir, f), 'utf8')))) eorigin[k] = f;
     for (const [object, d] of Object.entries(exp)) {
-      const text = d.text ?? d.regex!;
-      if (d.regex !== undefined && !/^[A-Za-z0-9 ,':&-]+$/.test(text)) continue;
-      out.push({ dir: expDir, object: `expected:${object}`, file: `expected/${eorigin[object]}`, text, def: { match: 'exact' } as ObjectDef, kind: 'text' });
+      const texts = d.list ?? [d.text ?? d.regex!];
+      for (const text of texts) {
+        if (hasPlaceholder(text)) continue;
+        if (d.regex !== undefined && !/^[A-Za-z0-9 ,':&-]+$/.test(text)) continue;
+        out.push({ dir: expDir, object: `expected:${object}`, file: `expected/${eorigin[object]}`, text, def: { match: 'exact' } as ObjectDef, kind: 'text' });
+      }
     }
   }
   return out;

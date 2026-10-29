@@ -1,0 +1,7 @@
+{
+  "_comment": "Module graph: locators with a changing part. {{0}}, {{1}} are filled from the call (the part is escaped when the entry is a regex; {{0:raw}} is used as it is).",
+
+  "graph.link.by-name": { "role": "link", "name": "^\\s*{{0}}\\s*$", "match": "regex", "pick": "all" },
+  "graph.button.by-b": { "role": "button", "name": "^\\s*{{0}}\\s*$", "match": "regex", "pick": "all" },
+  "graph.css.by-a-href-confidence-engine-href": { "css": "a[href*=\"/confidence-engine\"][href*=\"pillar={{0:raw}}\"]", "pick": "all" }
+}

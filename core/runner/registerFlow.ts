@@ -2,9 +2,11 @@ import { expect, Page, test as base } from '@playwright/test';
 import { loadCases, loadInput } from '../excel/readInput';
 import { InputConfig, TestCaseRow } from '../types';
 import { clearAllBlockers, getBlocker, setBlocker } from './blockers';
-import { BlockingFailure } from './checks';
+import { BlockingFailure, cleanError } from './checks';
+import { allure } from 'allure-playwright';
+import { scrub } from '../secrets';
 import { refreshResults } from '../reporting/resultsWorkbook';
-import { CaseHandler, executeCase } from './registerCases';
+import { CaseHandler, CaseOutcome, executeCase } from './registerCases';
 
 /**
  * The stages of the journey, in order. A BlockingFailure(key) raised by a step means "from this stage on nothing can work":
@@ -84,6 +86,15 @@ export function defineJourney<P>(def: JourneyDefinition<P>): void {
       test.setTimeout(mod.timeoutSec * 1000);
       const input = loadInput();
       const pg = def.createPage(journeyPage, input);
+      // Allure report: where this module sits and what it ran against (nothing secret).
+      await allure.epic('Testable QA - end to end');
+      await allure.feature(mod.title.replace(/\s*\(.*$/, ''));
+      await allure.parameter('Environment', input.env);
+      await allure.parameter('Site', input.baseUrl);
+      if (input.get('REPO')) await allure.parameter('Repository', input.get('REPO'));
+      if (input.get('BRANCHES')) await allure.parameter('Branch', input.get('BRANCHES').split(',')[0]);
+      if (input.get('BRANCH_URL')) await allure.link(input.get('BRANCH_URL').split(/[\s,;]+/)[0], 'Branch under test');
+      const ran: Array<{ id: string; name: string; result: string; secs: number }> = [];
       const rowsBySheet = new Map<string, TestCaseRow[]>();
       const rowOf = (sheet: string, id: string): TestCaseRow | undefined => {
         if (!rowsBySheet.has(sheet)) rowsBySheet.set(sheet, loadCases(sheet));
@@ -133,8 +144,17 @@ export function defineJourney<P>(def: JourneyDefinition<P>): void {
           }
           return undefined;
         };
-        const outcome = await test.step(`${step.id} ${row.name}`, () =>
-          executeCase({ sheet: step.sheet, subModule: row.subModule, row, handler: step.handler, page: journeyPage, pg, input, blockedBy, deferRefresh: true }));
+        // Each case is one step of the module in the Allure report. A failed case turns its step red (the error is caught here: the journey carries on).
+        let outcome!: CaseOutcome;
+        try {
+          await test.step(`${step.id} ${row.name}`, async () => {
+            outcome = await executeCase({ sheet: step.sheet, subModule: row.subModule, row, handler: step.handler, page: journeyPage, pg, input, blockedBy, deferRefresh: true });
+            if (outcome.result === 'FAIL') throw new Error(scrub(cleanError(outcome.failure)));
+          });
+        } catch (e) {
+          if (!outcome) throw e;
+        }
+        ran.push({ id: step.id, name: row.name, result: outcome.result, secs: Math.round((Date.now() - t0) / 1000) });
         if (outcome.result === 'FAIL') session.failed.push(step.id);
         session.tally[outcome.result] = (session.tally[outcome.result] ?? 0) + 1;
         const icon = outcome.result === 'PASS' ? '✔ PASS' : outcome.result === 'FAIL' ? '✘ FAIL' : `⏭ ${outcome.result}`;
@@ -153,6 +173,10 @@ export function defineJourney<P>(def: JourneyDefinition<P>): void {
       if (n === 0) { /* nothing ran in this module */ }
       else if (mod.resets) session.reached = clean ? at(mod.provides) : -1;
       else if (clean) session.reached = Math.max(session.reached, at(mod.provides));
+      if (ran.length) {
+        const count = (r: string): number => ran.filter((x) => x.result === r).length;
+        await allure.description([`**${ran.length} cases:** ${count('PASS')} passed, ${count('FAIL')} failed, ${count('SKIPPED')} skipped`, '', '| Case | Name | Result | Seconds |', '|---|---|---|---|', ...ran.map((x) => `| ${x.id} | ${x.name.replace(/\|/g, '/')} | ${x.result} | ${x.secs} |`)].join('\n'));
+      }
       console.log(`\n── ${mod.title}: finished; journey is at "${session.reached < 0 ? 'start' : STAGES[session.reached]}" ──`);
     });
   });

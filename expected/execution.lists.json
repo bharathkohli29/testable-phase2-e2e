@@ -1,0 +1,8 @@
+{
+  "execution.list.stages": {"list": ["Queued","Admitted","Syncing repository","Detecting languages & signals","Planning analysis","Running analysis tasks","Scoring & taxonomy","Publishing projections"]},
+  "execution.list.name-dashboard": {"list": ["Dashboard","Confidence Engine","Execution Assistant","Account and Plan"]},
+  "execution.list.label-confidence-score": {"list": ["Confidence Score","Whitebox Score","Blackbox Score","Validations Passed"]},
+  "execution.list.gate-pipeline-gate": {"list": ["Pipeline Gate","Whitebox Confidence","Blackbox Confidence"]},
+  "execution.list.label-total": {"list": ["TOTAL","PASSED","FAILED","COVERAGE","RETRIES","LOOP","PASS RATE"]},
+  "execution.list.col-classification": {"list": ["Classification","Value","Execution status","Result","Coverage"]}
+}

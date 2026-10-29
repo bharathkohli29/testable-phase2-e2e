@@ -9,17 +9,16 @@ import { readDashboardRow, readEngine, readGraph, readObject, same, until } from
 import { RepoPage } from '../repo/shared/RepoPage';
 import { pushDummyCommit } from './dummyCommit';
 import { obj as locatorOf } from '../../core/keywords/obj';
+import { listOf } from '../../core/keywords/expected';
 
+import { expected as expectedOf } from '../../core/keywords/expected';
 /**
  * The Latest commit module: add a "Dummy PR" line to the README of the branch under test, push it, and the platform has a newer tip.
  * Then click "Analyze latest commit" (this starts a REAL run and uses one execution), stay on the Confidence Engine page and wait for
  * the run to finish. Only what is new in a live run is checked here - the scores, tabs and graph were already checked in the
  * Confidence Engine and Graph modules. Everything is switched by ALLOW_DUMMY_COMMIT on the Input sheet (N = nothing is pushed or clicked).
  */
-const STAGES = [
-  'Queued', 'Admitted', 'Syncing repository', 'Detecting languages & signals', 'Planning analysis',
-  'Running analysis tasks', 'Scoring & taxonomy', 'Publishing projections',
-];
+const STAGES = listOf('latestcommit.list.stages');
 
 const st = {
   oldRun: '', oldSha: '', newSha: '', newRun: '', meterBefore: NaN, badCalls: [] as string[], wired: false,
@@ -170,7 +169,7 @@ export const latestCommitSteps: Record<string, CaseHandler<RepoPage>> = {
     // polled instead of a fixed 15 s sleep: the timer is read again until it has moved (or 45 s have passed)
     if (running) await check('The elapsed timer is moving while the run is going', () => expect.poll(readTimer, { timeout: 45_000, message: `timer first read ${t1}s` }).toBeGreaterThan(t1));
     else note('The run had already finished, so the moving timer could not be observed.');
-    await check('A task counter (N/total) is shown', () => expect(toggle).toContainText(/\d+\s*\/\s*\d+/));
+    await check('A task counter (N/total) is shown', () => expect(toggle).toContainText(expectedOf('latestcommit.text.by-pattern')));
     await snap('Execution Status of the new run with the stage list', [toggle, labelText(page, STAGES[0]).first()]);
     for (const stage of STAGES) await check(`Stage "${stage}" is listed`, () => expect(labelText(page, stage).first()).toBeVisible());
     await check('The stages are listed in the right order', async () => {
@@ -318,7 +317,7 @@ export const latestCommitSteps: Record<string, CaseHandler<RepoPage>> = {
     await check(`Runs Dashboard: the previous run (${old8}) is still listed`, async () => expect(await readDashboardRow(page, old8), 'the previous run disappeared').toBeDefined());
 
     await ctx.step('Go back to the Confidence Engine page of the new run', async () => {
-      const link = page.locator(`a[href*="runId=${st.newRun}"]`).first();
+      const link = locatorOf(page, 'latestcommit.css.by-a-href-runid-st', st.newRun).first();
       if (await link.count()) await link.click(); else await page.goto(home);
       await expect(pageTitle(page)).toBeVisible({ timeout: 30_000 });
     });

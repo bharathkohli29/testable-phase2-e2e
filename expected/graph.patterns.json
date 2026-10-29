@@ -1,0 +1,7 @@
+{
+  "graph.attr.by-runid-runId": {"regex":"runId={{0:raw}}"},
+  "graph.text.by-pattern-runId": {"regex":"{{0}}","flags":"i"},
+  "graph.text.by-pattern": {"regex":"…|\\.\\.\\."},
+  "graph.text.by-pattern-2": {"regex":"\\S"},
+  "graph.attr.by-runid-pillar-engine-pillar-engine-id": {"regex":"runId={{0:raw}}.*pillar=engine|pillar=engine.*runId={{0:raw}}"}
+}

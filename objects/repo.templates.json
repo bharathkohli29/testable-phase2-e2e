@@ -1,0 +1,12 @@
+{
+  "_comment": "Module repo: locators with a changing part. {{0}}, {{1}} are filled from the call (the part is escaped when the entry is a regex; {{0:raw}} is used as it is).",
+
+  "repo.text.by-select-one-branch-to-monitor-a": { "text": "Select one branch to monitor\\s*·\\s*{{0:raw}}\\s+available", "match": "regex", "pick": "all" },
+  "repo.text.by-branch": { "text": "{{0:raw}}", "match": "contains", "pick": "all" },
+  "repo.text.by-repo": { "text": "^\\s*{{0}}\\s*$", "match": "regex", "pick": "all" },
+  "repo.text.by-col": { "text": "{{0:raw}}", "match": "exact", "pick": "all" },
+  "repo.text.by-name": { "text": "/{{0}}\\s*$", "match": "regex", "pick": "all" },
+  "repo.button.by-name-public-private-internal": { "role": "button", "name": "^{{0}}\\s+(Public|Private|Internal)\\b", "match": "regex", "pick": "all" },
+  "repo.radio.by-branch-default": { "role": "radio", "name": "^\\s*{{0}}(\\s*default)?\\s*$", "match": "regex", "pick": "all" },
+  "repo.text.by-branch-selected": { "text": "{{0}}\\s+selected", "match": "regex", "pick": "all" }
+}

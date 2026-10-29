@@ -5,7 +5,7 @@ import { Ctx } from '../flow/helpers';
 import { loose } from '../login/shared/text';
 import { obj as locatorOf } from '../../core/keywords/obj';
 
-import { expected as expectedOf } from '../../core/keywords/expected';
+import { expected as expectedOf, listOf } from '../../core/keywords/expected';
 /**
  * The Sign-up module: the Register page (/auth/Register). NOTHING here may create an account:
  *   - the module installs a guard on the browser context that ABORTS every request that is not a read (POST / PUT / PATCH / DELETE),
@@ -150,7 +150,7 @@ export const signupSteps: Record<string, CaseHandler<RepoPage>> = {
     await open(ctx, 'organisation');
     const { page, check } = ctx;
     for (const [id, ph, type] of [['organisationName', 'Organization name', 'text'], ['fullName', 'Full name', 'text'], ['workEmail', 'Work email', 'email'], ['password', 'Password', 'password']] as const) {
-      const box = page.locator(`#${id}`);
+      const box = locatorOf(page, 'signup.css.by-id', id);
       await check(`"${ph}" box is shown, enabled, empty, of type ${type} and has the placeholder "${ph}"`, async () => {
         await expect(box).toBeVisible();
         await expect(box).toBeEnabled();
@@ -176,9 +176,9 @@ export const signupSteps: Record<string, CaseHandler<RepoPage>> = {
     await check('For "Individual" the Organization name box is not shown', () => expect(orgBox(page)).toBeHidden());
     for (const [id, ph] of [['fullName', 'Full name'], ['workEmail', 'Email'], ['password', 'Password']] as const) {
       await check(`"${id === 'workEmail' ? 'Email' : ph}" box is shown, enabled and has the placeholder "${ph}"`, async () => {
-        await expect(page.locator(`#${id}`)).toBeVisible();
-        await expect(page.locator(`#${id}`)).toBeEnabled();
-        await expect(page.locator(`#${id}`)).toHaveAttribute('placeholder', loose(ph, { exact: true }));
+        await expect(locatorOf(page, 'signup.css.by-id', id)).toBeVisible();
+        await expect(locatorOf(page, 'signup.css.by-id', id)).toBeEnabled();
+        await expect(locatorOf(page, 'signup.css.by-id', id)).toHaveAttribute('placeholder', loose(ph, { exact: true }));
       });
     }
     await check('Switching back to "Organization" shows the Organization name box again', async () => {
@@ -340,9 +340,9 @@ export const signupSteps: Record<string, CaseHandler<RepoPage>> = {
   'SUP-013': async (ctx) => {
     await open(ctx);
     const { page, check, note } = ctx;
-    for (const name of ['Google', 'Microsoft']) {
+    for (const name of listOf('signup.list.name-google')) {
       await check(`The "${name}" sign-up button is shown and enabled (not clicked)`, async () => {
-        const b = page.getByRole('button', { name: new RegExp(name, 'i') }).first();
+        const b = locatorOf(page, 'signup.button.by-name', name).first();
         await expect(b).toBeVisible();
         await expect(b).toBeEnabled();
       });
@@ -360,7 +360,7 @@ export const signupSteps: Record<string, CaseHandler<RepoPage>> = {
     await open(ctx);
     const { page, check, step } = ctx;
     const providers: Array<[string, string, string]> = [['Okta', 'okta.com', 'Okta'], ['Azure AD', 'azure.microsoft.com', 'Azure AD'], ['OneLogin', 'onelogin.com', 'OneLogin'], ['Auth0', 'auth0.com', 'Auth0']];
-    const provider = (name: string) => page.getByRole('option', { name: new RegExp(`^\\s*${name}`, 'i') }).or(page.getByRole('button', { name: new RegExp(`^\\s*${name}`, 'i') }));
+    const provider = (name: string) => locatorOf(page, 'signup.option.by-name', name).or(locatorOf(page, 'signup.button.by-name-2', name));
     await check('Before opening, the SSO providers are not listed', () => expect(locatorOf(page, 'signup.text.okta-com').first()).toBeHidden());
     await step('Click "Sign up with SSO"', () => locatorOf(page, 'signup.button.sign-up-with-sso').click());
     for (const [name, domain] of providers) {
@@ -373,7 +373,7 @@ export const signupSteps: Record<string, CaseHandler<RepoPage>> = {
     for (const [name, , label] of providers) {
       if (!(await provider(name).count())) await locatorOf(page, 'signup.button.sign-up-with-sso').click().catch(() => undefined);
       await provider(name).first().click().catch(() => undefined);
-      await check(`Choosing "${name}" shows a "Continue with ${label}" button (not clicked)`, () => expect(page.getByRole('button', { name: loose(`Continue with ${label}`) }).first()).toBeVisible());
+      await check(`Choosing "${name}" shows a "Continue with ${label}" button (not clicked)`, () => expect(locatorOf(page, 'signup.button.by-continue-with-label', label).first()).toBeVisible());
     }
     await check('The page is still the Register page (nothing was started)', () => expect(page).toHaveURL(/\/auth\/register/i));
     await sentNothing(check);
@@ -384,9 +384,9 @@ export const signupSteps: Record<string, CaseHandler<RepoPage>> = {
     const { page, check } = ctx;
     for (const [name, path] of [['Terms', 'terms-of-service'], ['Privacy Policy', 'privacy-policy']] as const) {
       await check(`"${name}" link is shown, opens in a new tab and goes to the testable.io ${path} page (not opened)`, async () => {
-        const a = page.getByRole('link', { name: loose(name, { exact: true }) }).first();
+        const a = locatorOf(page, 'signup.link.by-name', name).first();
         await expect(a).toBeVisible();
-        await expect(a).toHaveAttribute('href', new RegExp(`^https://(www\\.)?testable\\.io/${path}`, 'i'));
+        await expect(a).toHaveAttribute('href', expectedOf('signup.attr.by-https-www-testable-io-path', path));
         await expect(a).toHaveAttribute('target', expectedOf('signup.attr.blank'));
         expect(((await a.getAttribute('rel')) ?? '').toLowerCase()).toContain('noopener');
       });

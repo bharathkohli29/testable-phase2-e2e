@@ -38,11 +38,11 @@ export const normalHandlers: Record<string, CaseHandler<NormalLoginPage>> = {
 
   'LOGIN-NRM-002': async ({ pg, page, data, check, snap }) => {
     await pg.open();
-    await snap('Login page sub-heading and tagline', page.getByText(loose(data.subheading ?? '')).and(locatorOf(page, 'login.css.visible')).first());
+    await snap('Login page sub-heading and tagline', locatorOf(page, 'login.text.by-data', data.subheading ?? '').and(locatorOf(page, 'login.css.visible')).first());
     await check(`Sub-heading "${data.subheading}" is visible`, () =>
-      expect(page.getByText(loose(data.subheading ?? '')).and(locatorOf(page, 'login.css.visible')).first()).toBeVisible());
+      expect(locatorOf(page, 'login.text.by-data', data.subheading ?? '').and(locatorOf(page, 'login.css.visible')).first()).toBeVisible());
     await check(`Tagline "${data.tagline}" is visible`, () =>
-      expect(page.getByText(loose(data.tagline ?? '')).and(locatorOf(page, 'login.css.visible')).first()).toBeVisible());
+      expect(locatorOf(page, 'login.text.by-data', data.tagline ?? '').and(locatorOf(page, 'login.css.visible')).first()).toBeVisible());
   },
 
   'LOGIN-NRM-003': async ({ pg, data, check, snap }) => {

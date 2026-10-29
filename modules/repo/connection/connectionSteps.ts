@@ -5,7 +5,9 @@ import { CaseHandler } from '../../../core/runner/registerCases';
 import { inputs } from '../../flow/helpers';
 import { HOME_PATH, RepoPage, ci, esc } from '../shared/RepoPage';
 import { obj as locatorOf } from '../../../core/keywords/obj';
+import { listOf } from '../../../core/keywords/expected';
 
+import { expected as expectedOf } from '../../../core/keywords/expected';
 /**
  * Steps 1-3 of the journey: sign in -> Execution Assistant home -> Change repository / branch -> Connect / Import repository ->
  * repository list -> View all -> search -> choose the repository. Every step carries on from the previous one on the same page.
@@ -67,15 +69,15 @@ export const connectionSteps: Record<string, CaseHandler<RepoPage>> = {
 
   'REPO-CON-004': async (ctx) => {
     const { snap, pg, data, check, note } = ctx;
-    await check('GitHub card shows Provider = GitHub', () => expect(pg.scmValue('Provider')).toHaveText(ci(data.provider ?? 'GitHub')));
+    await check('GitHub card shows Provider = GitHub', () => expect(pg.scmValue('Provider')).toHaveText(expectedOf('repo.text.by-pattern-data', data.provider ?? 'GitHub')));
     await check('GitHub card shows an Organization', () => expect(pg.scmValue('Organization')).not.toHaveText(''));
-    await check('GitHub card shows the Repositories count', () => expect(pg.scmValue('Repositories')).toHaveText(/^\d+$/));
+    await check('GitHub card shows the Repositories count', () => expect(pg.scmValue('Repositories')).toHaveText(expectedOf('repo.text.by-pattern')));
     await check('GitHub card shows Status = Active', () => expect(pg.scmValue('Status')).toHaveText(ci('Active'))); // upper / lower case does not matter
     const showing = locatorOf(pg.page, 'repo.text.showing-of-repositories').last();
     await check('The first rows are shown ("Showing 5 of N repositories")', () => expect(showing).toBeVisible());
     await snap('GitHub card with the repository table', pg.scmCard);
-    for (const col of ['Repository', 'Visibility', 'Language', 'Recent commit', 'Updated']) {
-      await check(`Table column "${col}" is shown`, () => expect(pg.page.getByText(ci(col)).and(locatorOf(pg.page, 'repo.css.visible')).first()).toBeVisible());
+    for (const col of listOf('repo.list.col-repository')) {
+      await check(`Table column "${col}" is shown`, () => expect(locatorOf(pg.page, 'repo.text.by-col', col).and(locatorOf(pg.page, 'repo.css.visible')).first()).toBeVisible());
     }
     note(`Header: ${(await showing.innerText().catch(() => '')).trim()}`);
   },
@@ -123,7 +125,7 @@ export const connectionSteps: Record<string, CaseHandler<RepoPage>> = {
     const { repo } = inputs(ctx, { repo: true });
     const name = repo.split('/').pop() ?? repo;
     await ctx.step(`Choosing "${repo}" opens its configuration (Confirm repository appears)`, () => pg.chooseRepo(repo));
-    note(`Repository named on the card: ${(await pg.page.getByText(new RegExp(`/${esc(name)}\\s*$`, 'i')).last().innerText().catch(() => '')).trim() || 'not found'}`);
+    note(`Repository named on the card: ${(await locatorOf(pg.page, 'repo.text.by-name', name).last().innerText().catch(() => '')).trim() || 'not found'}`);
     await check('The "Choose a repository" dialog is closed', () => expect(pg.repoDialog).toBeHidden());
     await check('"Confirm repository" is shown on the configuration card', () => expect(pg.confirmRepo).toBeVisible());
     await snap('Configuration card with "Confirm repository"', pg.confirmRepo);

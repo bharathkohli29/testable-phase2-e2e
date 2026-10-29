@@ -1,3 +1,4 @@
+import { reportStep } from '../reporting/trace';
 import type { Locator, Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -218,7 +219,7 @@ export class Checks {
   async check(description: string, fn: () => unknown | Promise<unknown>, mark?: Mark): Promise<void> {
     if (mark && typeof mark !== 'function' && this.focusTargets.length === 0) this.focusTargets = Array.isArray(mark) ? mark : [mark];
     try {
-      await fn();
+      await reportStep(`Check · ${description}`, async () => fn());
       this.lines.push(`✔ ${description}`);
     } catch (e) {
       if (e instanceof BlockingFailure || e instanceof SkipCase) throw e;
@@ -232,7 +233,7 @@ export class Checks {
   /** A step the rest of the case depends on: on failure it is logged and the case stops (FAIL). */
   async step(description: string, fn: () => unknown | Promise<unknown>): Promise<void> {
     try {
-      await fn();
+      await reportStep(`Step · ${description}`, async () => fn());
       this.lines.push(`✔ ${description}`);
     } catch (e) {
       if (!(e instanceof SkipCase)) {

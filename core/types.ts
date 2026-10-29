@@ -15,6 +15,8 @@ export interface InputConfig {
   raw: Record<string, string>;
   /** Names of credentials that are filled in on the Input sheet (they belong in .env). */
   sheetCredentials?: string[];
+  /** Problems found in the BRANCH_URL cell (shown by the Input sheet check). */
+  branchUrlProblems?: string[];
   /** Looks up KEY, then <ENV>_KEY (e.g. get('EMAIL') -> QA_EMAIL when ENV=QA). */
   get(name: string): string;
   /** Replaces {{KEY}} tokens with values from the Input sheet. */

@@ -5,7 +5,7 @@ import { CaseHandler } from '../../core/runner/registerCases';
 import { RepoPage } from '../repo/shared/RepoPage';
 import { obj as locatorOf } from '../../core/keywords/obj';
 
-import { expected as expectedOf } from '../../core/keywords/expected';
+import { expected as expectedOf, listOf } from '../../core/keywords/expected';
 /**
  * The Confidence Object module: every part of /confidence-engine?pillar=object (workspace overview) for the run that just finished.
  * Verified live. The page is read from its own text (locators / role names) and compared with the same data calls the page makes
@@ -22,7 +22,7 @@ const anyShown = (loc: Locator, timeout = 10_000): Promise<void> =>
   expect.poll(async () => { for (const l of await loc.all()) if (await l.isVisible().catch(() => false)) return true; return false; }, { timeout }).toBe(true);
 const letters = (s: string): string => s.toLowerCase().replace(/[^a-z]/g, '');
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const DOMAINS = ['Whitebox', 'Blackbox', 'Performance', 'Security', 'Compliance'];
+const DOMAINS = listOf('object.list.domains');
 
 interface Card { score: string; status: string; name: string; sub: string; domains: string[] }
 interface View {
@@ -112,7 +112,7 @@ export const objectSteps: Record<string, CaseHandler<RepoPage>> = {
       expect(norm(await locatorOf(page, 'object.css.body').innerText())).toMatch(new RegExp(`run\\s*${id.slice(0, 8)}`, 'i'));
     });
     await check('The "Branch run" selector shows the branch, the commit and the start of the run id', () =>
-      expect(locatorOf(page, 'object.combobox.branch-run')).toContainText(new RegExp(`${esc((q.get('branch') ?? '').slice(0, 20))}.*[0-9a-f]{7}.*${id.slice(0, 8)}`, 'i')));
+      expect(locatorOf(page, 'object.combobox.branch-run')).toContainText(expectedOf('object.text.by-0-9a-f-7-q-id', (q.get('branch') ?? '').slice(0, 20), id.slice(0, 8))));
     await check('"Back to Confidence Engine" is shown at the bottom', () => expect(locatorOf(page, 'object.link.back-to-confidence-engine').first()).toBeVisible());
     await check('No error message is shown', () => expect(locatorOf(page, 'object.text.something-went-wrong-failed-to-load')).toHaveCount(0));
     note(`Run ${id}`);
@@ -125,7 +125,7 @@ export const objectSteps: Record<string, CaseHandler<RepoPage>> = {
     await snap('Left menu and top links of the Confidence Object page', locatorOf(page, 'object.navigation.workspace'));
     for (const [name, href] of [['Dashboard', '/dashboard'], ['Confidence Engine', '/confidence-engine'], ['Execution Assistant', '/execution-assistant'], ['Account and Plan', '/account']] as const) {
       await check(`Left menu link "${name}" is shown and goes to ${href}`, async () => {
-        const link = page.getByRole('link', { name: new RegExp(`^\\s*${esc(name)}\\s*$`, 'i') }).first();
+        const link = locatorOf(page, 'object.link.by-name', name).first();
         await expect(link).toBeVisible();
         await expect(link).toHaveAttribute('href', new RegExp(href));
       });
@@ -136,16 +136,16 @@ export const objectSteps: Record<string, CaseHandler<RepoPage>> = {
       const m = norm(await meter.innerText()).match(/Executions:\s*(\d+)\s*\/\s*(\d+)/)!;
       expect(num(m[1])).toBeLessThanOrEqual(num(m[2]));
     });
-    for (const name of ['Sign out', 'Notifications', 'Support', 'Submit question']) {
-      await check(`The "${name}" button is shown`, () => expect(page.getByRole('button', { name: new RegExp(esc(name), 'i') }).first()).toBeVisible());
+    for (const name of listOf('object.list.name-sign-out')) {
+      await check(`The "${name}" button is shown`, () => expect(locatorOf(page, 'object.button.by-name', name).first()).toBeVisible());
     }
     for (const [name, pillar] of [['Confidence Object', 'object'], ['Confidence Graph', 'graph'], ['Confidence Engine', 'engine']] as const) {
       await check(`The top link "${name}" points to this run with pillar=${pillar}`, async () => {
-        const link = page.locator(`a[href*="/confidence-engine"][href*="pillar=${pillar}"]`).first();
+        const link = locatorOf(page, 'object.css.by-a-href-confidence-engine-href', pillar).first();
         await expect(link).toBeVisible();
-        await expect(link).toHaveAttribute('href', new RegExp(`runId=${id}`));
+        await expect(link).toHaveAttribute('href', expectedOf('object.attr.by-runid-id', id));
       });
-      await check(`The "About ${name}" button is shown`, () => expect(page.getByRole('button', { name: new RegExp(`About ${esc(name)}`, 'i') }).first()).toBeVisible());
+      await check(`The "About ${name}" button is shown`, () => expect(locatorOf(page, 'object.button.by-about-name', name).first()).toBeVisible());
     }
     await check('"Closed-Loop Intel" is marked COMING SOON', () =>
       expect(locatorOf(page, 'object.css.a-div-button').filter({ hasText: /Closed.?Loop Intel/i }).filter({ hasText: /coming soon/i }).last()).toBeVisible());
@@ -428,7 +428,7 @@ export const objectSteps: Record<string, CaseHandler<RepoPage>> = {
     await ctx.snap('The "Back to Confidence Engine" link', back);
     await check('"Back to Confidence Engine" is shown and goes to the engine page of this run', async () => {
       await expect(back).toBeVisible();
-      await expect(back).toHaveAttribute('href', new RegExp(`runId=${id}.*pillar=engine|pillar=engine.*runId=${id}`));
+      await expect(back).toHaveAttribute('href', expectedOf('object.attr.by-runid-pillar-engine-pillar-engine-id', id));
     });
     await ctx.step('Click "Back to Confidence Engine"', async () => {
       await back.click();

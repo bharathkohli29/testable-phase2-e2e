@@ -9,12 +9,27 @@ import { getScreenSize } from './core/screen';
 let headless = false;
 let slowMo = 0;
 let timeoutSec = 120;
+let environmentInfo: Record<string, string> = {};
 const screen = getScreenSize();
 try {
   const input = loadInput();
   headless = input.headless;
   slowMo = input.slowMoMs;
   timeoutSec = input.timeoutSec;
+  // shown on the first page of the Allure report (nothing secret)
+  environmentInfo = {
+    Environment: input.env,
+    Site: input.baseUrl,
+    Repository: input.get('REPO'),
+    Branch: input.get('BRANCHES').split(',')[0] ?? '',
+    'Branch link': (input.get('BRANCH_URL') || '').split(/[\s,;]+/)[0],
+    'Execute run clicked': /^(y|yes|true|1)$/i.test(input.get('ALLOW_EXECUTE_RUN')) ? 'yes' : 'no',
+    Browser: 'Chromium (Playwright)',
+    Headless: headless ? 'yes' : 'no',
+    'Site code branch': process.env.SITE_CODE_REF || input.get('SITE_CODE_REF') || '',
+    Run: process.env.RUN_ID ?? '',
+    Node: process.version,
+  };
 } catch {
   /* reported when the test files load */
 }
@@ -28,7 +43,12 @@ export default defineConfig({
   timeout: timeoutSec * 1000,
   expect: { timeout: 30_000 }, // a check waits up to 30 s for its element before it is reported as failed (slow site)
   outputDir: path.join(RUN_DIR, 'playwright-artifacts'),
-  reporter: [['list'], ['html', { outputFolder: path.join(RUN_DIR, 'playwright-report'), open: 'never' }]],
+  reporter: [
+    ['list'],
+    ['html', { outputFolder: path.join(RUN_DIR, 'playwright-report'), open: 'never' }],
+    // Allure: raw results here; `npm test` / `npm run report` turn them into results/run_<time>/allure-report/index.html
+    ['allure-playwright', { resultsDir: path.join(RUN_DIR, 'allure-results'), detail: true, suiteTitle: false, environmentInfo }],
+  ],
   globalSetup: './core/runner/globalSetup.ts',
   globalTeardown: './core/reporting/globalTeardown.ts',
   use: {

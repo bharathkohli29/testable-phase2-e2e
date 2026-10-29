@@ -1,0 +1,3 @@
+{
+  "dashboard.list.columns": {"list": ["Run ID","Attempt","Project","Branch","Commit","Status","Score","Tasks","Created"]}
+}

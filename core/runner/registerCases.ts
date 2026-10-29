@@ -5,6 +5,7 @@ import { loadCases, loadInput, parseTestData } from '../excel/readInput';
 import { EVIDENCE_DIR, RECORDS_DIR, RUN_DIR } from '../paths';
 import { CaseRecord, InputConfig, Result, TestCaseRow } from '../types';
 import { scrub } from '../secrets';
+import { attachFile, attachText } from '../reporting/trace';
 import { refreshResults } from '../reporting/resultsWorkbook';
 import { getBlocker, setBlocker } from './blockers';
 import { BlockingFailure, Checks, cleanError, explain, SkipCase, type Mark } from './checks';
@@ -73,6 +74,18 @@ async function takeEvidence(page: Page, id: string): Promise<string> {
   }
 }
 
+/** Puts what a case did into the Allure report: the case description, the Actual Result lines and the evidence picture. */
+async function attachToReport(row: TestCaseRow, actual: string, screenshot: string, input: InputConfig): Promise<void> {
+  const data = scrub(row.testData ? input.resolve(row.testData) : '');
+  await attachText('Test case', scrub([
+    `${row.id}  ${row.name}`, `Module: ${row.module}  ›  ${row.subModule}`,
+    row.preconditions ? `\nPreconditions:\n${row.preconditions}` : '', row.steps ? `\nTest steps:\n${row.steps}` : '',
+    data ? `\nTest data:\n${data}` : '', row.expected ? `\nExpected result:\n${row.expected}` : '',
+  ].filter(Boolean).join('\n')));
+  await attachText('Actual result', scrub(actual));
+  if (screenshot) await attachFile(`Evidence ${row.id}`, path.join(RUN_DIR, screenshot), 'image/png');
+}
+
 export interface DefinedCase {
   id: string;
   /** Test title: "<TC ID> <name>". */
@@ -121,6 +134,7 @@ export async function executeCase<P>(o: ExecuteOptions<P>): Promise<CaseOutcome>
 
   if (!handler) {
     writeRecord({ ...base, result: 'SKIPPED', actual: 'Not automated yet (dummy placeholder).', screenshot: '', durationMs: 0 });
+    await attachToReport(row, 'Not automated yet (dummy placeholder).', '', input);
     if (!o.deferRefresh) await refreshResults(input.writeResultsToInput);
     return { result: 'SKIPPED' };
   }
@@ -180,6 +194,7 @@ export async function executeCase<P>(o: ExecuteOptions<P>): Promise<CaseOutcome>
     checks.note(skipReason);
     // a skipped case did nothing on the page, so a picture of it only costs space - no screenshot
     writeRecord({ ...base, result: 'SKIPPED', actual: checks.text, screenshot: '', durationMs: Date.now() - started });
+    await attachToReport(row, checks.text, '', input);
     if (!o.deferRefresh) await refreshResults(input.writeResultsToInput);
     return { result: 'SKIPPED' };
   }
@@ -187,6 +202,7 @@ export async function executeCase<P>(o: ExecuteOptions<P>): Promise<CaseOutcome>
   const result: Result = failure ? 'FAIL' : 'PASS';
   const screenshot: string = failure && checks.failureShot ? checks.failureShot : failure ? await takeEvidence(page, row.id) : (await checks.finalShot()) || (await takeEvidence(page, row.id));
   writeRecord({ ...base, result, actual: checks.text, screenshot, durationMs: Date.now() - started });
+  await attachToReport(row, checks.text, screenshot, input);
   if (!o.deferRefresh) await refreshResults(input.writeResultsToInput);
   return { result, failure };
 }

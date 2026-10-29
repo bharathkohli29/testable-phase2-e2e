@@ -19,4 +19,4 @@ export const comingSoonCard = (page: Page): Locator =>
 
 /** A label that the page shows in capitals but stores in normal case. Exact, any case. */
 export const labelText = (page: Page, label: string): Locator =>
-  page.getByText(new RegExp(`^\\s*${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i'));
+  locatorOf(page, 'shell.text.by-label', label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));

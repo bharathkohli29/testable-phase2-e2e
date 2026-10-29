@@ -6,7 +6,7 @@ import { RepoPage } from '../../repo/shared/RepoPage';
 import { closeSupport, norm, open, supportButton, supportItem } from '../../flow/ui';
 import { ANY_AUTH_URL, LOGIN_URL, NormalLoginPage } from './normalLogin.page';
 
-import { expected as expectedOf } from '../../../core/keywords/expected';
+import { expected as expectedOf, listOf } from '../../../core/keywords/expected';
 /** Extra Login cases from the QA sheets, verified live on QA (15 Oct). Password reset and e-mail verification are only LOOKED AT: no reset mail is requested. */
 export const extraLoginSteps: Record<string, CaseHandler<RepoPage>> = {
   'LOGIN-NRM-022': async ({ page, input, check, snap }) => {
@@ -17,7 +17,7 @@ export const extraLoginSteps: Record<string, CaseHandler<RepoPage>> = {
     await btn.click();
     const menu = obj(page, 'shell.supportMenu');
     await check('Pressing it opens a menu', () => expect(menu).toBeVisible());
-    for (const item of ['Live Chat', 'Submit a Request', 'User Guide']) {
+    for (const item of listOf('login.list.item-live-chat')) {
       await check(`The menu offers "${item}"`, () => expect(supportItem(page, new RegExp(`^\\s*${item}\\s*$`, 'i'))).toBeVisible(), menu);
     }
     await snap('Support menu on the login page', menu);

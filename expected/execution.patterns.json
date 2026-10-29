@@ -1,0 +1,8 @@
+{
+  "execution.text.by-pattern-branch": {"regex":"{{0}}","flags":"i"},
+  "execution.text.by-pattern": {"regex":"[\\w.-]+\\/[\\w.-]+"},
+  "execution.text.by-0-9a-f-8-2": {"regex":"[0-9a-f]{8}\\s*(…|\\.{2,3})","flags":"i"},
+  "execution.text.by-0-9a-f-7-run": {"regex":"[0-9a-f]{7}.*{{0:raw}}","flags":"i"},
+  "execution.text.by-m-2-s-s": {"regex":"\\d+m \\d{2}s|\\d+s"},
+  "execution.text.by-pattern-2": {"regex":"\\d+\\/\\d+"}
+}

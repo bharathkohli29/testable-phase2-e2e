@@ -17,9 +17,9 @@ export const branchSteps: Record<string, CaseHandler<RepoPage>> = {
     const { repo } = inputs(ctx, { repo: true });
     await check('"Branches & triggers" summary card is shown', () => expect(pg.summaryCard).toBeVisible());
     const name = repo.split('/').pop() ?? repo;
-    await check(`Summary Repository is "${repo}"`, () => expect(pg.summaryValue('Repository')).toContainText(has(name)));
+    await check(`Summary Repository is "${repo}"`, () => expect(pg.summaryValue('Repository')).toContainText(expectedOf('repo.text.by-pattern-name', name)));
     await check('Summary shows a Default branch', () => expect(pg.summaryValue('Default branch')).not.toHaveText(''));
-    await check('Summary shows Branches available as a number', () => expect(pg.summaryValue('Branches available')).toHaveText(/^\d+$/));
+    await check('Summary shows Branches available as a number', () => expect(pg.summaryValue('Branches available')).toHaveText(expectedOf('repo.text.by-pattern')));
     await check('"Confirm repository" is shown', () => expect(pg.confirmRepo).toBeVisible());
     await check('"Choose another" is shown and enabled', () => expect(pg.chooseAnother).toBeEnabled());
     await snap('Branches & triggers summary card', pg.summaryCard);
@@ -49,7 +49,7 @@ export const branchSteps: Record<string, CaseHandler<RepoPage>> = {
     await check('It says "Select one branch to monitor · N available"', () => expect(locatorOf(pg.branchDialog, 'repo.text.select-one-branch-to-monitor-availab').first()).toBeVisible());
     await check('It has a "Search branches…" box', () => expect(pg.branchSearch).toBeVisible());
     await check(`The count in the chooser matches "Branches available" (${available})`, () =>
-      expect(pg.branchDialog.getByText(new RegExp(`Select one branch to monitor\\s*·\\s*${available}\\s+available`, 'i')).first()).toBeVisible());
+      expect(locatorOf(pg.branchDialog, 'repo.text.by-select-one-branch-to-monitor-a', available).first()).toBeVisible());
     await check('The default branch is ticked and tagged "default"', async () => {
       await expect(locatorOf(pg.branchDialog, 'repo.text.default').first()).toBeVisible();
       // the rows may be radio buttons or checkboxes
@@ -65,7 +65,7 @@ export const branchSteps: Record<string, CaseHandler<RepoPage>> = {
     const { branch } = inputs(ctx, { branches: 1 });
     await pg.openBranchDialog(); // (re)open: BRN-003 left it open or closed
     await pg.branchSearch.fill(branch);
-    await check(`Searching "${branch}" lists the branch`, () => expect(pg.branchDialog.getByText(has(branch)).first()).toBeVisible({ timeout: 15_000 }));
+    await check(`Searching "${branch}" lists the branch`, () => expect(locatorOf(pg.branchDialog, 'repo.text.by-branch', branch).first()).toBeVisible({ timeout: 15_000 }));
     await snap('Branch search result in the dialog', pg.branchDialog);
   },
 
@@ -182,7 +182,7 @@ export const branchSteps: Record<string, CaseHandler<RepoPage>> = {
     await check('The "Search all repositories…" box is shown', () => expect(pg.inlineSearch).toBeVisible());
     await check('The table of repositories is shown (repositories with their Public / Private visibility)', async () =>
       expect(await locatorOf(page, 'repo.text.public-private-internal').count()).toBeGreaterThanOrEqual(1));
-    const listed = await page.getByText(new RegExp(`^\\s*${esc(repo.split('/').pop() as string)}\\s*$`, 'i')).last().isVisible().catch(() => false);
+    const listed = await locatorOf(page, 'repo.text.by-repo', repo.split('/').pop() as string).last().isVisible().catch(() => false);
     ctx.note(listed ? `"${repo}" is one of the 5 listed rows.` : `"${repo}" is not among the 5 listed rows (the list shows only the first 5 of all repositories; the search box and "View all" reach the rest).`);
     await check('"View all N repositories" is shown', () => expect(pg.viewAll).toBeVisible());
     await snap('Repository table ("Showing 5 of N repositories")', locatorOf(page, 'repo.text.showing-of-repositories').last());

@@ -1,0 +1,8 @@
+{
+  "plan.text.by-pattern-escaped": {"regex":"^\\s*{{0:raw}}\\s*$","flags":"i"},
+  "plan.text.by-pattern-escaped-2": {"regex":"^\\s*[^/]+/{{0:raw}}\\s*$","flags":"i"},
+  "plan.text.by-pattern-branch": {"regex":"{{0}}","flags":"i"},
+  "plan.text.by-0-9a-f-7-40": {"regex":"[0-9a-f]{7,40}\\s*$","flags":"i"},
+  "plan.text.by-pattern-commit": {"regex":"{{0}}","flags":"i"},
+  "plan.text.by-pattern-i": {"regex":"^\\s*{{0:raw}}"}
+}

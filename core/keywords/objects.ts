@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { Frame, FrameLocator, Locator, Page } from '@playwright/test';
 import { ROOT } from '../paths';
+import { traced } from '../reporting/trace';
 
 /**
  * THE OBJECT REPOSITORY.
@@ -65,7 +66,7 @@ const arr = (v: string | string[] | undefined): string[] => (v === undefined ? [
 /** The text(s) a definition looks for (used by the locator check against the site's code). */
 export function textsOf(def: ObjectDef): Array<{ text: string; regex: boolean }> {
   const regex = def.match === 'regex';
-  return [...arr(def.name), ...arr(def.text), ...arr(def.placeholder), ...arr(def.label)].map((text) => ({ text, regex }));
+  return [...arr(def.name), ...arr(def.text), ...arr(def.placeholder), ...arr(def.label)].filter((t) => !hasPlaceholder(t)).map((text) => ({ text, regex }));
 }
 
 /** Reads every /objects/*.json file (except routes.json) into one repository and checks it. Throws one message listing ALL mistakes. */
@@ -102,7 +103,7 @@ export function loadObjects(dir: string = OBJECTS_DIR): ObjectRepo {
     if (def.within !== undefined && !repo[def.within]) problems.push(`${where}: within "${def.within}" is not defined`);
     if (def.match === 'regex') {
       for (const t of arr(def.name ?? def.text ?? def.placeholder ?? def.label)) {
-        try { new RegExp(t, def.flags ?? 'i'); } catch { problems.push(`${where}: "${t}" is not a valid regular expression`); }
+        try { new RegExp(t.replace(/\{\{\d+(:raw)?\}\}/g, 'x'), def.flags ?? 'i'); } catch { problems.push(`${where}: "${t}" is not a valid regular expression`); }
       }
     }
   }
@@ -153,6 +154,16 @@ function looseSource(text: string, exact: boolean): string {
   return exact ? `^[\\W_]*${body}[\\W_]*$` : body;
 }
 
+/** Fills {{0}}, {{1}} ... of a template with the values given by the call. In a regular expression the value is escaped; {{0:raw}} is used as it is. */
+export function fill(template: string, args: ReadonlyArray<string | number>, regex: boolean): string {
+  return template.replace(/\{\{(\d+)(:raw)?\}\}/g, (_m, i: string, raw?: string) => {
+    const a = args[Number(i)];
+    if (a === undefined) throw new Error(`The template "${template}" needs value number ${i} (${Number(i) + 1} value(s) must be given).`);
+    return regex && !raw ? escRe(String(a)) : String(a);
+  });
+}
+export const hasPlaceholder = (t: string): boolean => /\{\{\d+(:raw)?\}\}/.test(t);
+
 /** The text/regex a definition compares with. "playwright" returns the text itself (Playwright's own matching). */
 export function matcher(text: string, mode: ObjectDef['match'], flags?: string): RegExp | string {
   switch (mode) {
@@ -166,14 +177,30 @@ export function matcher(text: string, mode: ObjectDef['match'], flags?: string):
   }
 }
 
+/** A short human text of what an entry looks for (used in the report: Click · repo.button.confirm — button "Confirm"). */
+function summaryOf(def: ObjectDef): string {
+  const t = arr(def.name ?? def.text ?? def.placeholder ?? def.label).join(' / ');
+  if (def.testid !== undefined) return `test id ${def.testid}`;
+  if (def.css !== undefined) return `css ${def.css}`;
+  if (def.role !== undefined) return t ? `${def.role} "${t}"` : def.role;
+  const kind = def.placeholder !== undefined ? 'placeholder' : def.label !== undefined ? 'label' : 'text';
+  return `${kind} "${t}"`;
+}
+
 /** Builds the Playwright locator for an object. `all` ignores "pick" (used when the keyword counts or loops). */
 export type Scope = Page | Locator | Frame | FrameLocator;
-export function locate(page: Scope, repo: ObjectRepo, name: string, opts: { all?: boolean } = {}): Locator {
-  const def = repo[name];
-  if (!def) {
+export function locate(page: Scope, repo: ObjectRepo, name: string, opts: { all?: boolean; args?: ReadonlyArray<string | number> } = {}): Locator {
+  const raw = repo[name];
+  if (!raw) {
     const near = Object.keys(repo).filter((k) => k.toLowerCase().includes(name.toLowerCase().split('.').pop() ?? '')).slice(0, 5);
     throw new Error(`Object "${name}" is not in the object repository (/objects/*.json).${near.length ? ` Similar names: ${near.join(', ')}.` : ''}`);
   }
+  const args = opts.args ?? [];
+  const isRegex = raw.match === 'regex';
+  const f = (v: string | string[] | undefined): string | string[] | undefined => (v === undefined ? v : Array.isArray(v) ? v.map((x) => fill(x, args, isRegex)) : fill(v, args, isRegex));
+  const def: ObjectDef = args.length || [raw.name, raw.text, raw.placeholder, raw.label, raw.css, raw.testid].some((v) => v !== undefined && arr(v as string | string[]).some(hasPlaceholder))
+    ? { ...raw, name: f(raw.name), text: f(raw.text), placeholder: f(raw.placeholder), label: f(raw.label), css: raw.css === undefined ? undefined : fill(raw.css, args, false), testid: raw.testid === undefined ? undefined : fill(raw.testid, args, false) }
+    : raw;
   const scope: Scope = def.within ? locate(page, repo, def.within, { all: false }) : page;
   const roleOptions = (n: RegExp | string | undefined): Record<string, unknown> => {
     const o: Record<string, unknown> = {};
@@ -200,6 +227,7 @@ export function locate(page: Scope, repo: ObjectRepo, name: string, opts: { all?
   if (names.length === 0) loc = one();
   else loc = names.map((n) => one(n)).reduce((a, b) => a.or(b));
   const pick = def.pick ?? 'first';
-  if (opts.all || pick === 'all') return loc;
-  return pick === 'first' ? loc.first() : pick === 'last' ? loc.last() : loc.nth(pick);
+  const label = `${name} — ${summaryOf(def)}`;
+  if (opts.all || pick === 'all') return traced(loc, label);
+  return traced(pick === 'first' ? loc.first() : pick === 'last' ? loc.last() : loc.nth(pick), label);
 }

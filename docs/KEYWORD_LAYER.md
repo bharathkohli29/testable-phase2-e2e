@@ -64,10 +64,29 @@ The new keyword cases and the Login module (`modules/login/normal`: login page, 
 | What | Where | Used as |
 |---|---|---|
 | Locators of every module (button names, labels, placeholders, test ids) | `objects/<module>.json` (one entry per line) | `locatorOf(page, 'repo.button.confirm')` |
-| Order of the modules, titles, timeouts, on/off (Sign up is off) | `config/modules.json` | read by `modules/flow/journey.spec.ts` |
-| Expected texts the checks compare with | `expected/<module>.json` | `expectedOf('graph.value.draft-only-not-sent')` |
+| Locators with a changing part (a menu name, a branch, a run id ...) | `objects/<module>.templates.json`, with `{{0}}`, `{{1}}` in the text | `locatorOf(menu, 'object.link.by-name', name)` |
+| Order of the modules, titles, timeouts, on/off, and the list of cases each module runs | `config/modules.json` | read by `modules/flow/journey.spec.ts` |
+| Expected texts and patterns the checks compare with | `expected/<module>.json`, `.patterns.json` | `expectedOf('graph.value.draft-only-not-sent')` |
+| Expected patterns with a changing part | `expected/<module>.patterns.json` (`{{0}}`) | `expectedOf('object.attr.by-runid-id', id)` |
+| Lists of texts a check goes through (header buttons, menu groups, table columns ...) | `expected/<module>.lists.json` | `for (const b of listOf('graph.list.b-sign-out'))` |
 | Credentials | `.env` (encrypted automatically) | never in code or Excel |
 
-* Change the order or switch a module off: edit `config/modules.json` only (the test names, e.g. `-g "1 · Login module"`, come from its `title`).
-* Before every run, the site's code is compared with the last run. Renamed texts are changed in `objects/` and in `expected/` (exact texts and plain-word patterns). Patterns with symbols (for example `/\/billing/`) are written by people and are never edited automatically; they are listed under "needs a person" only when it applies.
-* Counts, addresses and numbers that a check computes stay in the code on purpose (they are not texts a person reads).
+How a `{{0}}` is filled: the value comes from the call. In a regular expression it is escaped automatically (`{{0}}`); `{{0:raw}}` is put in as it is.
+
+* Change the order, the cases of a module, or switch a module off: edit `config/modules.json` only (the test names, e.g. `-g "1 · Login module"`, come from its `title`). The case ids and the code that runs each case stay in `modules/**`.
+* Before every run the site's code is compared with the last run. Renamed texts are changed in `objects/`, in `expected/` (exact texts, plain-word patterns) and in the lists. Entries with `{{ }}` and patterns with symbols are written by people and are never edited automatically.
+* What stays in the code on purpose: values that come from the Excel sheet or from the run itself (branch, run id, commit), counts and numbers a check computes, and the code that performs each case.
+
+## Where the settings live (Input sheet vs .env)
+
+* **`.env` (this machine / environment, never committed):** `TEST_ENV` (QA or DEV), `QA_BASE_URL` / `DEV_BASE_URL`, `QA_S3_BUCKET` / `DEV_S3_BUCKET`, `AWS_*`, the accounts (`QA_EMAIL`, `QA_PASSWORD`, ...; encrypted automatically), `SITE_CODE_PATH`, `SITE_CODE_REF`, `AUTO_UPDATE_OBJECTS`, `AUTO_FETCH_SITE`. Any name written in `.env` wins over a cell of the Input sheet with the same name.
+* **Input sheet (what changes per run):** `BRANCH_URL` (the link of the branch to run, for example `https://github.com/owner/repo/tree/branch`; the repository and the branch are taken from it), browser switches, waits, `ALLOW_*` switches.
+* A link with several branches of the SAME repository (comma or new line) runs the first branch; `npm run test:branches` runs them one after another. The older `REPO` / `BRANCHES` cells still work when `BRANCH_URL` is empty.
+
+## Allure report (what ran, every locator, every screenshot)
+
+`npm test` runs the journey and then builds ONE html file: `results/run_<time>/allure-report/index.html`
+(double-click it, or mail it - the screenshots are inside). `npm run report` rebuilds it for the newest run
+(`npm run report -- results\run_<time>` for another one). It shows, per module: the cases with PASS / FAIL / SKIPPED,
+every check and step, every locator action (`Click · <repository key> — <what it finds>`), the expected result,
+the actual result and the screenshot of each case. Passwords, keys and e-mails are replaced by ******** in the text.

@@ -1,0 +1,5 @@
+{
+  "_comment": "Module latestcommit: locators with a changing part. {{0}}, {{1}} are filled from the call (the part is escaped when the entry is a regex; {{0:raw}} is used as it is).",
+
+  "latestcommit.css.by-a-href-runid-st": { "css": "a[href*=\"runId={{0:raw}}\"]", "pick": "all" }
+}

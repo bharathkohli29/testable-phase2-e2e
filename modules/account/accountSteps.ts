@@ -4,7 +4,7 @@ import { RepoPage } from '../repo/shared/RepoPage';
 import { bodyText, norm, open, waitText } from '../flow/ui';
 import { obj as locatorOf } from '../../core/keywords/obj';
 
-import { expected as expectedOf } from '../../core/keywords/expected';
+import { expected as expectedOf, listOf } from '../../core/keywords/expected';
 /**
  * The Account module: the Account page (/account) and the Billing page it links to (/billing). Verified live on QA (15 Oct).
  * Plan name, price, limits and dates differ from account to account, so every check reads what the page shows and compares the
@@ -193,8 +193,8 @@ export const accountSteps: Record<string, CaseHandler<RepoPage>> = {
     await accountPage(page, input);
     const head = locatorOf(page, 'account.heading.capabilities').first();
     await check('The section "Capabilities" is shown', () => expect(head).toBeVisible());
-    for (const group of ['Execution', 'Reliability']) {
-      const h = page.getByRole('heading', { name: new RegExp(`^\\s*${group}\\s*$`, 'i') }).first();
+    for (const group of listOf('account.list.group-execution')) {
+      const h = locatorOf(page, 'account.heading.by-group', group).first();
       await check(`"${group}" is shown with at least one item`, async () => {
         await expect(h).toBeVisible();
         const items = await locatorOf(h, 'account.css.xpath-following-ul-1-li').count();
@@ -266,7 +266,7 @@ export const accountSteps: Record<string, CaseHandler<RepoPage>> = {
     await check('"Terms of Service" is a link', async () => {
       const link = locatorOf(page, 'account.link.terms-of-service').first();
       await expect(link).toBeVisible();
-      await expect(link).toHaveAttribute('href', /\S/);
+      await expect(link).toHaveAttribute('href', expectedOf('account.attr.by-pattern'));
     });
     await check('"Secure checkout powered by Stripe" is shown', () => expect(locatorOf(page, 'account.text.secure-checkout-powered-by-stripe').first()).toBeVisible());
     await check('The button for the plan in use reads "Current Plan" and cannot be pressed (it is not clicked here)', async () => {

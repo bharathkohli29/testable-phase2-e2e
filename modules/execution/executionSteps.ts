@@ -8,17 +8,14 @@ import { inputs } from '../flow/helpers';
 import { RepoPage, ci, flex, has } from '../repo/shared/RepoPage';
 import { obj as locatorOf } from '../../core/keywords/obj';
 
-import { expected as expectedOf } from '../../core/keywords/expected';
+import { expected as expectedOf, listOf } from '../../core/keywords/expected';
 /**
  * The Execution module: Run plan -> "Execute run" -> "White Box execution" card -> "Open Confidence Engine" -> wait for the run to
  * finish -> results. Verified live (C-_Stack / WestCoastFitness-positive, run took ~14 min). Checks use locators (roles / names /
  * text) and the run API calls the page itself makes (read from inside the page, same session) - never screenshots.
  * "Execute run" starts a REAL pipeline, so it is clicked ONLY when ALLOW_EXECUTE_RUN = Y on the Input sheet.
  */
-const STAGES = [
-  'Queued', 'Admitted', 'Syncing repository', 'Detecting languages & signals', 'Planning analysis',
-  'Running analysis tasks', 'Scoring & taxonomy', 'Publishing projections',
-];
+const STAGES = listOf('execution.list.stages');
 const TABS: Array<[string, string]> = [
   ['Code Intelligence', 'CODE INTELLIGENCE'], ['Performance', 'PERFORMANCE TESTING'], ['Security', 'SECURITY'], ['Compliance', 'COMPLIANCE'],
 ];
@@ -87,7 +84,7 @@ export const executionSteps: Record<string, CaseHandler<RepoPage>> = {
     }
     await check('The chat shows "Execute whitebox run"', () => expect(locatorOf(page, 'execution.text.execute-white-box-run').last()).toBeVisible());
     await check(`"White Box Analysis is underway" names the branch "${branch}"`, () =>
-      expect(locatorOf(page, 'execution.text.white-box-analysis-is-underway-for').last()).toContainText(has(branch)));
+      expect(locatorOf(page, 'execution.text.white-box-analysis-is-underway-for').last()).toContainText(expectedOf('execution.text.by-pattern-branch', branch)));
     await check('The page header shows "Executing…"', () => expect(locatorOf(page, 'execution.text.executing').first()).toBeVisible());
     await check('"Cancel execution" is offered', () => expect(locatorOf(page, 'execution.button.cancel-execution').first()).toBeVisible());
     await snap('Run started ("White Box Analysis is underway")', locatorOf(page, 'execution.text.white-box-analysis-is-underway-for').last());
@@ -99,14 +96,14 @@ export const executionSteps: Record<string, CaseHandler<RepoPage>> = {
     const { branch } = inputs(ctx, { branches: 1 });
     const card = chatCard(page);
     await ctx.step('The "White Box execution" card appears', () => expect(card).toBeVisible({ timeout: 60_000 }));
-    await check('The card names the repository as <owner>/<repo>', () => expect(card).toContainText(/[\w.-]+\/[\w.-]+/));
+    await check('The card names the repository as <owner>/<repo>', () => expect(card).toContainText(expectedOf('execution.text.by-pattern')));
     await check('It shows "N/1 branches"', () => expect(card).toContainText(expectedOf('execution.text.1-branch')));
     await check('It has "Execution status" with a status', async () => {
       await expect(locatorOf(card, 'execution.text.execution-status').first()).toBeVisible();
       await expect(card).toContainText(expectedOf('execution.text.execution-status')); // any status word (IN PROGRESS, STARTING, ...)
     });
-    await check(`It lists the branch "${branch}"`, () => expect(card).toContainText(has(branch)));
-    await check('It shows a shortened run id (8 characters and "…")', () => expect(card).toContainText(/[0-9a-f]{8}\s*(…|\.{2,3})/i));
+    await check(`It lists the branch "${branch}"`, () => expect(card).toContainText(expectedOf('execution.text.by-pattern-branch', branch)));
+    await check('It shows a shortened run id (8 characters and "…")', () => expect(card).toContainText(expectedOf('execution.text.by-0-9a-f-8-2')));
     await check('"Open Confidence Engine" is visible and enabled', async () => {
       await expect(locatorOf(card, 'execution.button.open-confidence-engine')).toBeVisible();
       await expect(locatorOf(card, 'execution.button.open-confidence-engine')).toBeEnabled();
@@ -135,9 +132,9 @@ export const executionSteps: Record<string, CaseHandler<RepoPage>> = {
     await check('The address has a repositoryId (a UUID)', () => expect(url.searchParams.get('repositoryId') ?? '').toMatch(uuid));
     const selector = locatorOf(page, 'execution.combobox.branch-run');
     await check('The "Branch run" selector is shown', () => expect(selector).toBeVisible({ timeout: 30_000 }));
-    await check(`It shows the branch "${branch.slice(0, 20)}…"`, () => expect(selector).toContainText(has(branch.slice(0, 20))));
+    await check(`It shows the branch "${branch.slice(0, 20)}…"`, () => expect(selector).toContainText(expectedOf('execution.text.by-pattern-branch', branch.slice(0, 20))));
     await check('It shows the commit id and the first 8 characters of the run id', () =>
-      expect(selector).toContainText(new RegExp(`[0-9a-f]{7}.*${run.id.slice(0, 8)}`, 'i')));
+      expect(selector).toContainText(expectedOf('execution.text.by-0-9a-f-7-run', run.id.slice(0, 8))));
     run.commit = (((await selector.innerText().catch(() => '')) || '').match(/\b([0-9a-f]{7})\b/i)?.[1]) ?? '';
     await check('The Execution Assistant thread is shown on the left', () =>
       expect(locatorOf(page, 'execution.text.execution-assistant-thread').first()).toBeVisible());
@@ -147,21 +144,21 @@ export const executionSteps: Record<string, CaseHandler<RepoPage>> = {
 
   'EXE-004': async (ctx) => {
     const { snap, page, check } = ctx;
-    for (const name of ['Dashboard', 'Confidence Engine', 'Execution Assistant', 'Account and Plan']) {
-      await check(`Left menu link "${name}"`, () => expect(page.getByRole('link', { name: flex(name) }).first()).toBeVisible());
+    for (const name of listOf('execution.list.name-dashboard')) {
+      await check(`Left menu link "${name}"`, () => expect(locatorOf(page, 'execution.link.by-name', name).first()).toBeVisible());
     }
     await check('Left menu "Sign out"', () => expect(locatorOf(page, 'execution.button.sign-out').first()).toBeVisible());
     for (const [name, pillar] of [['Confidence Object', 'object'], ['Confidence Graph', 'graph']] as const) {
-      await check(`Top tab "${name}"`, () => expect(page.locator(`a[href*="/confidence-engine"][href*="pillar=${pillar}"]`).first()).toBeVisible());
+      await check(`Top tab "${name}"`, () => expect(locatorOf(page, 'execution.css.by-a-href-confidence-engine-href', pillar).first()).toBeVisible());
     }
     await check('Top tab "Confidence Engine"', () => expect(locatorOf(page, 'execution.text.confidence-engine').first()).toBeVisible());
     await snap('Confidence Engine page: menu, tabs and score cards', locatorOf(page, 'execution.text.confidence-engine').first());
     await check('"Closed-Loop Intel" is shown as COMING SOON', () => expect(comingSoonCard(page)).toBeVisible());
-    for (const label of ['Confidence Score', 'Whitebox Score', 'Blackbox Score', 'Validations Passed']) {
-      await check(`Score card "${label}"`, () => expect(page.getByText(flex(label)).first()).toBeVisible());
+    for (const label of listOf('execution.list.label-confidence-score')) {
+      await check(`Score card "${label}"`, () => expect(locatorOf(page, 'execution.text.by-label', label).first()).toBeVisible());
     }
     for (const [tab] of TABS) {
-      await check(`Category tab "${tab}"`, () => expect(page.getByRole('button', { name: flex(tab) }).first()).toBeVisible());
+      await check(`Category tab "${tab}"`, () => expect(locatorOf(page, 'execution.button.by-tab', tab).first()).toBeVisible());
     }
   },
 
@@ -170,14 +167,14 @@ export const executionSteps: Record<string, CaseHandler<RepoPage>> = {
     const toggle = locatorOf(page, 'execution.button.execution-status').first();
     await ctx.step('"Execution Status" is shown', () => expect(toggle).toBeVisible());
     if (!(await locatorOf(page, 'execution.text.queued').first().isVisible().catch(() => false))) await toggle.click().catch(() => undefined);
-    await check('A timer is shown (e.g. "2m 01s")', () => expect(toggle).toContainText(/\d+m \d{2}s|\d+s/));
-    await check('A task counter is shown (N/total)', () => expect(toggle).toContainText(/\d+\/\d+/));
+    await check('A timer is shown (e.g. "2m 01s")', () => expect(toggle).toContainText(expectedOf('execution.text.by-m-2-s-s')));
+    await check('A task counter is shown (N/total)', () => expect(toggle).toContainText(expectedOf('execution.text.by-pattern-2')));
     for (const stage of STAGES) {
-      await check(`Stage "${stage}"`, () => expect(onScreen(page.getByText(flex(stage)))).toBeVisible());
+      await check(`Stage "${stage}"`, () => expect(onScreen(locatorOf(page, 'execution.text.by-label', stage))).toBeVisible());
     }
     await check('The stages are in the right order', async () => {
       // read only the block that holds the stages (the chat above may mention some of the same words)
-      const list = locatorOf(page.getByText(flex(STAGES[0])).first(), 'execution.css.xpath-ancestor-contains-translate-no');
+      const list = locatorOf(locatorOf(page, 'execution.text.by-label', STAGES[0]).first(), 'execution.css.xpath-ancestor-contains-translate-no');
       const text = ((await list.innerText().catch(() => '')) || (await bodyText(page))).toLowerCase(); // capitals may come from CSS
       const at = STAGES.map((s) => text.indexOf(s.toLowerCase()));
       expect(at.every((n) => n >= 0)).toBe(true);
@@ -246,13 +243,13 @@ export const executionSteps: Record<string, CaseHandler<RepoPage>> = {
   'EXE-008': async (ctx) => {
     const { snap, page, check, note } = ctx;
     await check('"Gate Analysis" is shown', () => expect(locatorOf(page, 'execution.text.gate-analysis').first()).toBeVisible());
-    for (const gate of ['Pipeline Gate', 'Whitebox Confidence', 'Blackbox Confidence']) {
+    for (const gate of listOf('execution.list.gate-pipeline-gate')) {
       await check(`Gate "${gate}" is shown with its weight`, async () => {
-        await expect(page.getByText(flex(gate)).first()).toBeVisible();
-        await expect(locatorOf(page.getByText(flex(gate)).first(), 'execution.css.xpath-following-sibling-1')).toContainText(expectedOf('execution.text.weight'));
+        await expect(locatorOf(page, 'execution.text.by-label', gate).first()).toBeVisible();
+        await expect(locatorOf(locatorOf(page, 'execution.text.by-label', gate).first(), 'execution.css.xpath-following-sibling-1')).toContainText(expectedOf('execution.text.weight'));
       });
     }
-    for (const label of ['TOTAL', 'PASSED', 'FAILED', 'COVERAGE', 'RETRIES', 'LOOP', 'PASS RATE']) {
+    for (const label of listOf('execution.list.label-total')) {
       await check(`Metric "${label}" is shown`, () => expect(labelText(page, label).first()).toBeVisible());
     }
     await snap('Gate Analysis and run metrics', locatorOf(page, 'execution.text.gate-analysis').first());
@@ -279,13 +276,13 @@ export const executionSteps: Record<string, CaseHandler<RepoPage>> = {
     for (const [tab, heading] of TABS) {
       const head = onScreen(locatorOf(page, 'execution.css.p').filter({ hasText: new RegExp(`^\\s*${tab}`, 'i') }));
       await check(`${tab}: the tab opens`, async () => {
-        await page.getByRole('button', { name: flex(tab) }).first().click();
+        await locatorOf(page, 'execution.button.by-tab', tab).first().click();
         await expect(head).toBeVisible({ timeout: 15_000 });
       });
       await check(`${tab}: the heading "${heading}" is shown`, () => expect(head).toBeVisible());
       await check(`${tab}: at least one gate says COMPLETED`, () => expect(onScreen(locatorOf(page, 'execution.text.completed'))).toBeVisible());
-      for (const col of ['Classification', 'Value', 'Execution status', 'Result', 'Coverage']) {
-        await check(`${tab}: table column "${col}"`, () => expect(onScreen(page.getByText(new RegExp(`^\\s*${col}\\s*$`, 'i')))).toBeVisible());
+      for (const col of listOf('execution.list.col-classification')) {
+        await check(`${tab}: table column "${col}"`, () => expect(onScreen(locatorOf(page, 'execution.text.by-col', col))).toBeVisible());
       }
       await check(`${tab}: results are PASS, FAIL or N/A`, () => expect(onScreen(locatorOf(page, 'execution.text.pass-passed-fail-failed-n-a'))).toBeVisible());
       if (!snapped) { snapped = true; await snap(`${tab} tab: results table`, head); }

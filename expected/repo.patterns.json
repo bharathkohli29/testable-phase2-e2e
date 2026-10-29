@@ -1,0 +1,5 @@
+{
+  "repo.text.by-pattern-name": {"regex":"{{0}}","flags":"i"},
+  "repo.text.by-pattern": {"regex":"^\\d+$"},
+  "repo.text.by-pattern-data": {"regex":"^\\s*{{0}}\\s*$","flags":"i"}
+}

@@ -1,0 +1,3 @@
+{
+  "coverage.list.areas": {"list": ["Code Duplication","Code Quality Auditing","Cognitive Complexity","Cyclomatic Complexity","Dependency Risk (SCA)","Lint / Rule Violations","Readability / Maintainability","Security White-box Testing","Static Code Analysis","Static Vulnerabilities (SAST)","Structural Analysis"]}
+}

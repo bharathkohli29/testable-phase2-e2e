@@ -5,10 +5,10 @@
   "description": "Phase 2: modular, Excel-driven Playwright tests for Testable",
   "scripts": {
     "template": "ts-node scripts/createInputTemplate.ts",
-    "test": "playwright test modules/flow",
-    "test:flow": "playwright test modules/flow",
+    "test": "ts-node scripts/runTests.ts",
+    "test:flow": "ts-node scripts/runTests.ts",
     "typecheck": "tsc --noEmit",
-    "report": "playwright show-report",
+    "report": "ts-node scripts/allureReport.ts",
     "sync": "ts-node scripts/syncWorkbook.ts",
     "test:branches": "ts-node scripts/runBranches.ts",
     "test:keywords": "playwright test modules/keywords",
@@ -16,11 +16,14 @@
     "secrets:watch": "ts-node scripts/secrets.ts watch",
     "secrets:check": "ts-node scripts/secrets.ts check",
     "objects:update": "ts-node scripts/updateObjects.ts",
-    "locators:check": "ts-node scripts/checkLocators.ts"
+    "locators:check": "ts-node scripts/checkLocators.ts",
+    "report:playwright": "playwright show-report"
   },
   "devDependencies": {
-    "@playwright/test": "^1.47.0",
+    "@playwright/test": "^1.62.0",
     "@types/node": "^20.14.0",
+    "allure": "^3.22.1",
+    "allure-playwright": "^3.14.0",
     "exceljs": "^4.4.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.5.4",

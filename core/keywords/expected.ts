@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { ROOT } from '../paths';
+import { fill } from './objects';
 
 /**
  * EXPECTED-TEXT REPOSITORY (/expected/*.json): the texts the checks expect to see on the page, kept out of the code, like /objects.
@@ -12,7 +13,7 @@ import { ROOT } from '../paths';
  */
 export const EXPECTED_DIR = path.join(ROOT, 'expected');
 
-export interface ExpectedDef { text?: string; regex?: string; flags?: string }
+export interface ExpectedDef { text?: string; regex?: string; flags?: string; list?: string[] }
 export type ExpectedRepo = Record<string, ExpectedDef>;
 
 export function loadExpected(dir: string = EXPECTED_DIR): ExpectedRepo {
@@ -25,9 +26,10 @@ export function loadExpected(dir: string = EXPECTED_DIR): ExpectedRepo {
     for (const [k, d] of Object.entries(data)) {
       if (k.startsWith('_')) continue;
       if (repo[k]) problems.push(`${f}: "${k}" is defined twice`);
-      const hasText = typeof d?.text === 'string', hasRegex = typeof d?.regex === 'string';
-      if (hasText === hasRegex) { problems.push(`${f}: "${k}" needs exactly one of "text" or "regex"`); continue; }
-      if (hasRegex) { try { new RegExp(d.regex!, d.flags ?? ''); } catch (e) { problems.push(`${f}: "${k}" has an invalid pattern (${(e as Error).message})`); continue; } }
+      const hasText = typeof d?.text === 'string', hasRegex = typeof d?.regex === 'string', hasList = Array.isArray(d?.list);
+      if (Number(hasText) + Number(hasRegex) + Number(hasList) !== 1) { problems.push(`${f}: "${k}" needs exactly one of "text", "regex" or "list"`); continue; }
+      if (hasList && !d.list!.every((x) => typeof x === 'string')) { problems.push(`${f}: "${k}" list must contain only texts`); continue; }
+      if (hasRegex) { try { new RegExp(d.regex!.replace(/\{\{\d+(:raw)?\}\}/g, 'x'), d.flags ?? ''); } catch (e) { problems.push(`${f}: "${k}" has an invalid pattern (${(e as Error).message})`); continue; } }
       repo[k] = d;
     }
   }
@@ -37,10 +39,18 @@ export function loadExpected(dir: string = EXPECTED_DIR): ExpectedRepo {
 
 let cache: ExpectedRepo | undefined;
 /** The expected text/pattern for a key of /expected/*.json. */
-export function expected(key: string): string | RegExp {
+export function expected(key: string, ...args: Array<string | number>): string | RegExp {
   cache ??= loadExpected();
   const d = cache[key];
   if (!d) throw new Error(`Expected text "${key}" is not in /expected. Add it to the matching file in /expected.`);
-  return d.regex !== undefined ? new RegExp(d.regex, d.flags ?? '') : d.text!;
+  if (d.list) throw new Error(`"${key}" in /expected is a list: use listOf('${key}').`);
+  return d.regex !== undefined ? new RegExp(fill(d.regex, args, true), d.flags ?? '') : fill(d.text!, args, false);
+}
+/** A list of texts for /expected (for example the buttons the header must show). */
+export function listOf(key: string): string[] {
+  cache ??= loadExpected();
+  const d = cache[key];
+  if (!d?.list) throw new Error(`List "${key}" is not in /expected (it needs a "list": [...] entry).`);
+  return [...d.list];
 }
 export function resetExpectedCache(): void { cache = undefined; }

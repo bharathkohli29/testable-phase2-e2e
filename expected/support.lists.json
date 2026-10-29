@@ -1,0 +1,9 @@
+{
+  "support.list.topics": {"list": ["Confidence Engine — run failed","Confidence Engine — score interpretation","Whitebox / Blackbox gates","Taxonomy or compliance mapping","CI/CD integration","API or SDK","Billing or account","Other"]},
+  "support.list.item-live-chat": {"list": ["Live Chat","Submit a Request","User Guide"]},
+  "support.list.reply-i-have-a-question": {"list": ["I have a question","Tell me more"]},
+  "support.list.label-your-name": {"list": ["Your name","Email","Topic","What's going on?"]},
+  "support.list.b-attach-file": {"list": ["Attach file","Cancel","Submit ticket"]},
+  "support.list.groups": {"list": ["Getting Started","Authentication","SCM Connection","Whitebox Execution","Confidence Engine","Reference"]},
+  "support.list.m-authentication": {"list": ["Authentication","SCM Connection","Whitebox Execution","Confidence Engine"]}
+}

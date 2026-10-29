@@ -1,22 +1,136 @@
 {
-  "_help": "Order of the modules = order in this list. enabled=false skips a module (Sign up is off). The title is what -g \"1 · Login module\" matches. Keys must match the step lists in modules/flow/journey.spec.ts.",
+  "_help": "Order of the modules = order in this list. enabled=false skips a module (Sign up is off). title is what -g \"1 · Login module\" matches. steps = the cases of the module in the order they run: \"Sheet:CASE-ID@stage\" (stage = what the page must be ready for), or \"qa:Sheet@stage\" = all extra QA cases of that sheet. Whether a case really runs is decided by the Run column of the Excel sheet.",
   "modules": [
-    {"key": "login", "enabled": true, "title": "1 · Login module (page checks → Authenticate → signed-in checks)", "timeoutSec": 900, "needs": "start", "provides": "login"},
-    {"key": "assistant", "enabled": true, "title": "2 · Assistant home module (headline, analysis cards, header, Change repository dialog - nothing is started)", "timeoutSec": 600, "needs": "login", "provides": "login"},
-    {"key": "repo", "enabled": true, "title": "3 · Repo module (home → import repository → choose repository → branch → Confirm)", "timeoutSec": 900, "needs": "login", "provides": "confirm"},
-    {"key": "coverage", "enabled": true, "title": "4 · Coverage module (Coverage preview → Review branches → Continue)", "timeoutSec": 900, "needs": "confirm", "provides": "plan"},
-    {"key": "plan", "enabled": true, "title": "5 · Plan module (Run plan - Execute run is never clicked)", "timeoutSec": 600, "needs": "plan", "provides": "plan"},
-    {"key": "context", "enabled": true, "title": "6 · Context module (Repository ready bar, Source details, Repository history)", "timeoutSec": 600, "needs": "plan", "provides": "plan"},
-    {"key": "execution", "enabled": true, "title": "7 · Execution module (Execute run → Open Confidence Engine → wait for the run → results)", "timeoutSec": 2400, "needs": "plan", "provides": "finished"},
-    {"key": "confidence", "enabled": true, "title": "8 · Confidence Engine module (every part of the Confidence Engine page after the run)", "timeoutSec": 1500, "needs": "finished", "provides": "finished"},
-    {"key": "graph", "enabled": true, "title": "9 · Confidence Graph module (every part of the Confidence Graph page)", "timeoutSec": 1200, "needs": "finished", "provides": "finished"},
-    {"key": "object", "enabled": true, "title": "10 · Confidence Object module (every part of the Confidence Object page)", "timeoutSec": 1200, "needs": "finished", "provides": "finished"},
-    {"key": "latestcommit", "enabled": true, "title": "11 · Latest commit module (dummy README commit → Analyze latest commit → wait for the new run)", "timeoutSec": 2700, "needs": "finished", "provides": "finished"},
-    {"key": "dashboard", "enabled": true, "title": "12 · Dashboard module (the Runs Dashboard page)", "timeoutSec": 900, "needs": "login", "provides": "login"},
-    {"key": "account", "enabled": true, "title": "13 · Account module (Account page and Billing page - nothing is bought or changed)", "timeoutSec": 900, "needs": "login", "provides": "login"},
-    {"key": "support", "enabled": true, "title": "14 · Support module (Support menu, Live Chat, ticket dialog, User Guide - nothing is sent)", "timeoutSec": 900, "needs": "login", "provides": "login"},
-    {"key": "redirects", "enabled": true, "title": "15 · Redirects module (404 pages, old addresses, SCM integrations, left menu, run id protection)", "timeoutSec": 600, "needs": "login", "provides": "login"},
-    {"key": "signout", "enabled": true, "title": "16 · Sign out module (sign out → sign in with Enter)", "timeoutSec": 300, "needs": "login", "provides": "login", "resets": true},
-    {"key": "signup", "enabled": false, "title": "17 · Sign up module (the Register page - NO account is ever created)", "timeoutSec": 900, "needs": "start", "provides": "start", "resets": true}
+    {"key": "login", "enabled": true, "title": "1 · Login module (page checks → Authenticate → signed-in checks)", "timeoutSec": 900, "needs": "start", "provides": "login",
+      "steps": [
+        "Login:LOGIN-NRM-001@start", "Login:LOGIN-NRM-002@start", "Login:LOGIN-NRM-003@start",
+        "Login:LOGIN-NRM-004@start", "Login:LOGIN-NRM-005@start", "Login:LOGIN-NRM-006@start",
+        "Login:LOGIN-NRM-012@start", "Login:LOGIN-NRM-013@start", "Login:LOGIN-NRM-014@start",
+        "Login:LOGIN-NRM-016@start", "Login:LOGIN-NRM-017@start", "Login:LOGIN-NRM-019@start",
+        "Login:LOGIN-NRM-010@start", "Login:LOGIN-NRM-011@start", "Login:LOGIN-NRM-015@start",
+        "Login:LOGIN-NRM-022@start", "Login:LOGIN-RST-001@start", "Login:LOGIN-RST-002@start",
+        "Login:LOGIN-VER-001@start", "Login:LOGIN-VER-002@start", "Login:LOGIN-NRM-007@start",
+        "Login:LOGIN-NRM-008@login", "Login:LOGIN-NRM-020@login", "Login:LOGIN-NRM-021@login",
+        "Login:LOGIN-NRM-023@login"
+      ]},
+    {"key": "assistant", "enabled": true, "title": "2 · Assistant home module (headline, analysis cards, header, Change repository dialog - nothing is started)", "timeoutSec": 600, "needs": "login", "provides": "login",
+      "steps": [
+        "Assistant:EAH-001@login", "Assistant:EAH-002@login", "Assistant:EAH-004@login",
+        "Assistant:EAH-005@login", "Assistant:EAH-006@login", "qa:Assistant@login"
+      ]},
+    {"key": "repo", "enabled": true, "title": "3 · Repo module (home → import repository → choose repository → branch → Confirm)", "timeoutSec": 900, "needs": "login", "provides": "confirm",
+      "steps": [
+        "Repo:REPO-CON-001@login", "Repo:REPO-CON-002@login", "Repo:REPO-CON-003@login",
+        "Repo:REPO-CON-004@repo-list", "Repo:REPO-CON-005@repo-list", "Repo:REPO-CON-006@repo-list",
+        "Repo:REPO-CON-007@repo-list", "Repo:REPO-CON-008@repo-list", "Repo:REPO-BRN-001@configure",
+        "Repo:REPO-BRN-002@configure", "Repo:REPO-BRN-003@configure", "Repo:REPO-BRN-004@configure",
+        "Repo:REPO-BRN-005@configure", "Repo:REPO-BRN-006@configure", "Repo:REPO-BRN-007@configure",
+        "Repo:REPO-BRN-008@configure", "Repo:REPO-BRN-011@configure", "Repo:REPO-BRN-009@configure",
+        "qa:Repo@configure"
+      ]},
+    {"key": "coverage", "enabled": true, "title": "4 · Coverage module (Coverage preview → Review branches → Continue)", "timeoutSec": 900, "needs": "confirm", "provides": "plan",
+      "steps": [
+        "Coverage:COV-001@confirm", "Coverage:COV-002@confirm", "Coverage:COV-003@confirm",
+        "Coverage:COV-004@confirm", "Coverage:COV-005@confirm", "Coverage:COV-006@confirm",
+        "Coverage:COV-007@confirm", "Repo:REPO-BRN-010@confirm", "qa:Coverage@confirm"
+      ]},
+    {"key": "plan", "enabled": true, "title": "5 · Plan module (Run plan - Execute run is never clicked)", "timeoutSec": 600, "needs": "plan", "provides": "plan",
+      "steps": [
+        "Plan:PLAN-001@plan", "Plan:PLAN-002@plan", "Plan:PLAN-003@plan",
+        "Plan:PLAN-004@plan", "Plan:PLAN-005@plan", "Plan:PLAN-006@plan",
+        "Plan:PLAN-007@plan"
+      ]},
+    {"key": "context", "enabled": true, "title": "6 · Context module (Repository ready bar, Source details, Repository history)", "timeoutSec": 600, "needs": "plan", "provides": "plan",
+      "steps": [
+        "Context:CTX-001@plan", "Context:CTX-002@plan", "Context:CTX-003@plan"
+      ]},
+    {"key": "execution", "enabled": true, "title": "7 · Execution module (Execute run → Open Confidence Engine → wait for the run → results)", "timeoutSec": 2400, "needs": "plan", "provides": "finished",
+      "steps": [
+        "Execution:EXE-001@plan", "Execution:EXE-002@execute", "Execution:EXE-003@execute",
+        "Execution:EXE-004@engine", "Execution:EXE-005@engine", "Execution:EXE-006@engine",
+        "Execution:EXE-007@finished", "Execution:EXE-008@finished", "Execution:EXE-009@finished",
+        "Execution:EXE-010@finished", "qa:Execution@finished"
+      ]},
+    {"key": "confidence", "enabled": true, "title": "8 · Confidence Engine module (every part of the Confidence Engine page after the run)", "timeoutSec": 1500, "needs": "finished", "provides": "finished",
+      "steps": [
+        "Confidence:CE-001@finished", "Confidence:CE-002@finished", "Confidence:CE-003@finished",
+        "Confidence:CE-004@finished", "Confidence:CE-005@finished", "Confidence:CE-006@finished",
+        "Confidence:CE-007@finished", "Confidence:CE-008@finished", "Confidence:CE-009@finished",
+        "Confidence:CE-010@finished", "Confidence:CE-011@finished", "Confidence:CE-012@finished",
+        "Confidence:CE-013@finished", "Confidence:CE-014@finished", "Confidence:CE-015@finished",
+        "Confidence:CE-016@finished", "Confidence:CE-017@finished", "Confidence:CE-018@finished",
+        "Confidence:CE-019@finished", "Confidence:CE-020@finished", "qa:Confidence@finished"
+      ]},
+    {"key": "graph", "enabled": true, "title": "9 · Confidence Graph module (every part of the Confidence Graph page)", "timeoutSec": 1200, "needs": "finished", "provides": "finished",
+      "steps": [
+        "Graph:GR-001@finished", "Graph:GR-002@finished", "Graph:GR-003@finished",
+        "Graph:GR-004@finished", "Graph:GR-005@finished", "Graph:GR-006@finished",
+        "Graph:GR-007@finished", "Graph:GR-008@finished", "Graph:GR-009@finished",
+        "Graph:GR-010@finished", "Graph:GR-011@finished", "Graph:GR-012@finished",
+        "Graph:GR-013@finished", "Graph:GR-014@finished", "Graph:GR-015@finished",
+        "Graph:GR-016@finished", "qa:Graph@finished"
+      ]},
+    {"key": "object", "enabled": true, "title": "10 · Confidence Object module (every part of the Confidence Object page)", "timeoutSec": 1200, "needs": "finished", "provides": "finished",
+      "steps": [
+        "Object:OBJ-001@finished", "Object:OBJ-002@finished", "Object:OBJ-003@finished",
+        "Object:OBJ-004@finished", "Object:OBJ-005@finished", "Object:OBJ-006@finished",
+        "Object:OBJ-007@finished", "Object:OBJ-008@finished", "Object:OBJ-009@finished",
+        "Object:OBJ-010@finished", "Object:OBJ-011@finished", "Object:OBJ-012@finished",
+        "Object:OBJ-013@finished"
+      ]},
+    {"key": "latestcommit", "enabled": true, "title": "11 · Latest commit module (dummy README commit → Analyze latest commit → wait for the new run)", "timeoutSec": 2700, "needs": "finished", "provides": "finished",
+      "steps": [
+        "Commit:COM-001@finished", "Commit:COM-002@finished", "Commit:COM-003@finished",
+        "Commit:COM-004@finished", "Commit:COM-005@finished", "Commit:COM-006@finished",
+        "Commit:COM-007@finished"
+      ]},
+    {"key": "dashboard", "enabled": true, "title": "12 · Dashboard module (the Runs Dashboard page)", "timeoutSec": 900, "needs": "login", "provides": "login",
+      "steps": [
+        "Dashboard:DSH-001@login", "Dashboard:DSH-002@login", "Dashboard:DSH-003@login",
+        "Dashboard:DSH-004@login", "Dashboard:DSH-005@login", "Dashboard:DSH-006@login",
+        "Dashboard:DSH-007@login", "Dashboard:DSH-008@login", "Dashboard:DSH-009@login",
+        "Dashboard:DSH-010@login", "Dashboard:DSH-011@login", "Dashboard:DSH-012@login",
+        "qa:Dashboard@login"
+      ]},
+    {"key": "account", "enabled": true, "title": "13 · Account module (Account page and Billing page - nothing is bought or changed)", "timeoutSec": 900, "needs": "login", "provides": "login",
+      "steps": [
+        "Account:ACC-001@login", "Account:ACC-002@login", "Account:ACC-003@login",
+        "Account:ACC-004@login", "Account:ACC-005@login", "Account:ACC-006@login",
+        "Account:ACC-007@login", "Account:ACC-008@login", "Account:ACC-009@login",
+        "Account:ACC-010@login", "Account:ACC-011@login", "Account:ACC-012@login",
+        "Account:ACC-013@login", "Account:ACC-014@login", "Account:ACC-015@login",
+        "qa:Account@login"
+      ]},
+    {"key": "support", "enabled": true, "title": "14 · Support module (Support menu, Live Chat, ticket dialog, User Guide - nothing is sent)", "timeoutSec": 900, "needs": "login", "provides": "login",
+      "steps": [
+        "Support:SPT-001@login", "Support:SPT-002@login", "Support:SPT-003@login",
+        "Support:SPT-004@login", "Support:SPT-005@login", "Support:SPT-006@login",
+        "Support:SPT-007@login", "Support:SPT-008@login", "Support:SPT-009@login",
+        "Support:SPT-010@login", "Support:SPT-011@login", "Support:SPT-012@login",
+        "Support:SPT-013@login", "Support:SPT-014@login", "Support:SPT-015@login",
+        "Support:SPT-016@login", "Support:SPT-017@login", "Support:SPT-018@login",
+        "qa:Support@login"
+      ]},
+    {"key": "redirects", "enabled": true, "title": "15 · Redirects module (404 pages, old addresses, SCM integrations, left menu, run id protection)", "timeoutSec": 600, "needs": "login", "provides": "login",
+      "steps": [
+        "Redirects:RED-001@login", "Redirects:RED-002@login", "Redirects:RED-003@login",
+        "Redirects:RED-004@login", "Redirects:RED-005@login", "Redirects:RED-006@login",
+        "Redirects:RED-007@login", "Redirects:RED-008@login"
+      ]},
+    {"key": "signout", "enabled": true, "title": "16 · Sign out module (sign out → sign in with Enter)", "timeoutSec": 300, "needs": "login", "provides": "login", "resets": true,
+      "steps": [
+        "Login:LOGIN-NRM-024@login", "Login:LOGIN-NRM-018@login", "Login:LOGIN-NRM-009@login",
+        "qa:Login@login"
+      ]},
+    {"key": "signup", "enabled": false, "title": "17 · Sign up module (the Register page - NO account is ever created)", "timeoutSec": 900, "needs": "start", "provides": "start", "resets": true,
+      "steps": [
+        "Signup:SUP-001@start", "Signup:SUP-002@start", "Signup:SUP-003@start",
+        "Signup:SUP-004@start", "Signup:SUP-005@start", "Signup:SUP-006@start",
+        "Signup:SUP-007@start", "Signup:SUP-008@start", "Signup:SUP-009@start",
+        "Signup:SUP-010@start", "Signup:SUP-011@start", "Signup:SUP-012@start",
+        "Signup:SUP-013@start", "Signup:SUP-014@start", "Signup:SUP-015@start",
+        "Signup:SUP-016@start", "Signup:SUP-017@start", "Signup:SUP-018@start",
+        "Signup:SUP-019@start", "Signup:SUP-020@start", "qa:Signup@start"
+      ]}
   ]
 }

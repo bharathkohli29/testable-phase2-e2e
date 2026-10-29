@@ -1,0 +1,4 @@
+{
+  "object.list.domains": {"list": ["Whitebox","Blackbox","Performance","Security","Compliance"]},
+  "object.list.name-sign-out": {"list": ["Sign out","Notifications","Support","Submit question"]}
+}

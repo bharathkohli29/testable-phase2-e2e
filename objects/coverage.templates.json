@@ -1,0 +1,6 @@
+{
+  "_comment": "Module coverage: locators with a changing part. {{0}}, {{1}} are filled from the call (the part is escaped when the entry is a regex; {{0:raw}} is used as it is).",
+
+  "coverage.text.by-label": { "text": "{{0:raw}}", "match": "exact", "pick": "all" },
+  "coverage.text.by-n": { "text": "{{0:raw}}", "match": "flex", "pick": "all" }
+}

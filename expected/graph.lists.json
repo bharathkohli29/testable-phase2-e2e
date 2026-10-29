@@ -1,0 +1,4 @@
+{
+  "graph.list.b-sign-out": {"list": ["Sign out","Notifications","Support"]},
+  "graph.list.c-run-id": {"list": ["Run ID","Trigger","Story","Time","Duration","Status","Score"]}
+}

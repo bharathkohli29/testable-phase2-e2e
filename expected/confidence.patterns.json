@@ -1,0 +1,5 @@
+{
+  "confidence.attr.by-runid-id": {"regex":"runId={{0:raw}}"},
+  "confidence.text.by-m-2-s-s": {"regex":"\\d+m \\d{2}s|\\d+s"},
+  "confidence.text.by-pattern-name": {"regex":"{{0}}","flags":"i"}
+}

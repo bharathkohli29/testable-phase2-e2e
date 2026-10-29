@@ -10,7 +10,7 @@ import { readDashboardRow, readEngine, readGraph, readObject, same, until } from
 import { RepoPage } from '../repo/shared/RepoPage';
 import { obj as locatorOf } from '../../core/keywords/obj';
 
-import { expected as expectedOf } from '../../core/keywords/expected';
+import { expected as expectedOf, listOf } from '../../core/keywords/expected';
 /**
  * The Confidence Engine module: every part of /confidence-engine?pillar=engine once the run has finished.
  * Verified live (C-_Stack / WestCoastFitness-positive). Checks use locators (roles, names, labels, text, table cells) and the run API
@@ -24,11 +24,8 @@ const TABS: Array<{ button: string; label: RegExp; heading: string }> = [
   { button: 'Security', label: /^\s*security\s*$/i, heading: 'SECURITY' },
   { button: 'Compliance', label: /^\s*compliance\s*$/i, heading: 'COMPLIANCE' },
 ];
-const STAGES = [
-  'Queued', 'Admitted', 'Syncing repository', 'Detecting languages & signals', 'Planning analysis',
-  'Running analysis tasks', 'Scoring & taxonomy', 'Publishing projections',
-];
-const COLUMNS = ['Classification', 'Value', 'Execution status', 'Result', 'Coverage'];
+const STAGES = listOf('confidence.list.stages');
+const COLUMNS = listOf('confidence.list.columns');
 
 interface Row { tab: string; category: string; gate: string; name: string; value: string; exec: string; result: string; coverage: string }
 /** Filled by the four tab-walk cases, used by the row-rule case. */
@@ -68,7 +65,7 @@ const gateBox = (page: Page, t: (typeof TABS)[number]): Locator =>
 const gateHeading = (page: Page): Locator => locatorOf(page, 'confidence.css.h3').filter({ hasText: /\sgate\s*$/i }).first();
 
 async function openTab(page: Page, t: (typeof TABS)[number]): Promise<void> {
-  await page.getByRole('button', { name: t.button, exact: true }).click();
+  await locatorOf(page, 'confidence.button.by-t', t.button).click();
   await expect(categoryBox(page, t)).toBeVisible({ timeout: 15_000 });
 }
 
@@ -89,7 +86,7 @@ async function listCategories(page: Page, t: (typeof TABS)[number]): Promise<str
 async function selectCategory(page: Page, t: (typeof TABS)[number], name: string): Promise<void> {
   await closeMenus(page);
   const box = categoryBox(page, t);
-  const chip = box.getByRole('button', { name, exact: true }).or(locatorOf(box, 'confidence.button.item').filter({ hasText: exactText(name) }));
+  const chip = locatorOf(box, 'confidence.button.by-t', name).or(locatorOf(box, 'confidence.button.item').filter({ hasText: exactText(name) }));
   if (await chip.count()) {
     try { await chip.first().click({ timeout: 10_000 }); } catch { await closeMenus(page); await page.waitForTimeout(500); await chip.first().click({ timeout: 10_000, force: true }); }
     return;
@@ -188,9 +185,9 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
     });
     for (const [name, pillar] of [['Confidence Object', 'object'], ['Confidence Graph', 'graph'], ['Confidence Engine', 'engine']] as const) {
       await check(`The top link "${name}" points to this run with pillar=${pillar}`, async () => {
-        const link = page.locator(`a[href*="/confidence-engine"][href*="pillar=${pillar}"]:visible`).first();
+        const link = locatorOf(page, 'confidence.css.by-a-href-confidence-engine-href', pillar).first();
         await expect(link).toBeVisible();
-        await expect(link).toHaveAttribute('href', new RegExp(`runId=${id}`));
+        await expect(link).toHaveAttribute('href', expectedOf('confidence.attr.by-runid-id', id));
       });
     }
     await check('"Closed-Loop Intel" is marked COMING SOON', () => expect(comingSoonCard(page)).toBeVisible());
@@ -203,7 +200,7 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
     await snap('Left menu with the Workspace links', locatorOf(page, 'confidence.navigation.workspace'));
     for (const [name, href] of [['Dashboard', '/dashboard'], ['Confidence Engine', '/confidence-engine'], ['Execution Assistant', '/execution-assistant'], ['Account and Plan', '/account']] as const) {
       await check(`Left menu link "${name}" is shown and goes to ${href}`, async () => {
-        const link = page.getByRole('link', { name: exactText(name) }).first();
+        const link = locatorOf(page, 'confidence.link.by-name', name).first();
         await expect(link).toBeVisible();
         await expect(link).toHaveAttribute('href', new RegExp(href));
       });
@@ -251,7 +248,7 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
     const { page, check, note, snap } = ctx;
     const body = norm(await locatorOf(page, 'confidence.css.body').innerText());
     await snap('Score cards', [labelText(page, 'Confidence Score').first(), labelText(page, 'Validations Passed').first()]);
-    for (const label of ['Confidence Score', 'Whitebox Score', 'Blackbox Score', 'Validations Passed']) {
+    for (const label of listOf('confidence.list.label-confidence-score')) {
       await check(`The "${label}" card is shown`, () => expect(labelText(page, label).first()).toBeVisible());
     }
     // each card is read on its own, so extra text between the cards does not matter
@@ -289,7 +286,7 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
     const toggle = locatorOf(page, 'confidence.button.execution-status').first();
     await check('"Execution Status" is shown with a final timer (for example "14m 27s")', async () => {
       await expect(toggle).toBeVisible();
-      await expect(toggle).toContainText(/\d+m \d{2}s|\d+s/);
+      await expect(toggle).toContainText(expectedOf('confidence.text.by-m-2-s-s'));
     });
     const start = await toggle.getAttribute('aria-expanded');
     await toggle.click();
@@ -319,12 +316,12 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
     const { page, check, note, snap } = ctx;
     await check('"Gate Analysis" is shown', () => expect(labelText(page, 'Gate Analysis').first()).toBeVisible());
     await snap('Gate Analysis with weights and figures', labelText(page, 'Gate Analysis').first());
-    for (const gate of ['Pipeline Gate', 'Whitebox Confidence', 'Blackbox Confidence']) {
+    for (const gate of listOf('confidence.list.gate-pipeline-gate')) {
       await check(`"${gate}" shows a weight in %`, async () =>
         expect(norm(await locatorOf(page, 'confidence.css.body').innerText())).toMatch(new RegExp(`${gate}\\s*\\d+\\s*%\\s*weight`, 'i')));
     }
     const read: Record<string, string> = {};
-    for (const label of ['Total', 'Passed', 'Failed', 'Coverage', 'Retries', 'Loop', 'Pass Rate']) {
+    for (const label of listOf('confidence.list.label-total')) {
       await check(`The "${label.toUpperCase()}" figure is shown`, async () => {
         const v = valueUnder(page, exactText(label));
         await expect(v).toBeVisible();
@@ -337,7 +334,7 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
       expect(num(read.Passed) + num(read.Failed)).toBe(num(read.Total));
     });
     await check('COVERAGE and PASS RATE are percentages from 0 to 100', () => {
-      for (const k of ['Coverage', 'Pass Rate']) { expect(read[k]).toMatch(/^\d{1,3}(\.\d+)?\s*%$/); expect(num(read[k])).toBeLessThanOrEqual(100); }
+      for (const k of listOf('confidence.list.k-coverage')) { expect(read[k]).toMatch(/^\d{1,3}(\.\d+)?\s*%$/); expect(num(read[k])).toBeLessThanOrEqual(100); }
     });
     await check('RETRIES is a whole number', () => expect(read.Retries).toMatch(/^\d+$/));
     await check('LOOP shows a state word (for example "Stable")', () => expect(read.Loop).toMatch(/^[A-Za-z][A-Za-z \-]*$/));
@@ -397,14 +394,14 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
     const { page, check, note, snap } = ctx;
     let tipShot = false;
     const info = locatorOf(page, 'confidence.button.about');
-    const infoIcon = (n: string): Locator => locatorOf(page, 'confidence.css.table').getByLabel(exactText(`About ${n}`)).first();
+    const infoIcon = (n: string): Locator => locatorOf(locatorOf(page, 'confidence.css.table'), 'confidence.label.by-about-n', n).first();
     await check('The three "About ..." buttons next to the top links are shown', async () => {
-      for (const n of ['About Confidence Object', 'About Confidence Graph', 'About Confidence Engine']) await expect(page.getByRole('button', { name: exactText(n) }).first()).toBeVisible();
+      for (const n of listOf('confidence.list.n-about-confidence-object')) await expect(locatorOf(page, 'confidence.button.by-n', n).first()).toBeVisible();
     });
     const tipBox = () => locatorOf(page, 'confidence.css.data-slot-tooltip-content-visible-ro').first();
     const texts: string[] = [];
-    for (const n of ['About Confidence Object', 'About Confidence Graph', 'About Confidence Engine']) {
-      const b = page.getByRole('button', { name: exactText(n) }).first();
+    for (const n of listOf('confidence.list.n-about-confidence-object')) {
+      const b = locatorOf(page, 'confidence.button.by-n', n).first();
       await b.hover({ timeout: 5_000 }).catch(() => undefined);
       await check(`"${n}" shows an explanation text when pointed at`, async () => {
         const tip = tipBox();
@@ -442,8 +439,8 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
   'CE-013': async (ctx) => {
     await needPage(ctx);
     const { page, check, snap } = ctx;
-    for (const name of ['Notifications', 'Support']) {
-      const b = page.getByRole('button', { name: new RegExp(`^\\s*${name}\\b`, 'i') }).first();
+    for (const name of listOf('confidence.list.name-notifications')) {
+      const b = locatorOf(page, 'confidence.button.by-name', name).first();
       await check(`"${name}" is shown and closed to begin with`, async () => { await expect(b).toBeVisible(); await expect(b).not.toHaveAttribute('aria-expanded', expectedOf('confidence.attr.true')); });
       // An open panel hides the rest of the page from role queries, so the button is grabbed ONCE (before the click) and the same
       // element is read afterwards instead of searching for it again.
@@ -509,7 +506,7 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
     for (const [name, pillar] of [['Confidence Object', 'object'], ['Confidence Graph', 'graph']] as const) {
       // a page that does not open is a failed check, the next page is still tried
       await check(`"${name}" opens (pillar=${pillar})`, async () => {
-        await page.locator(`a[href*="/confidence-engine"][href*="pillar=${pillar}"]:visible`).first().click({ timeout: 15_000 });
+        await locatorOf(page, 'confidence.css.by-a-href-confidence-engine-href', pillar).first().click({ timeout: 15_000 });
         await page.waitForURL(new RegExp(`pillar=${pillar}`), { timeout: 20_000 });
       });
       await check(`"${name}": the address keeps the same run id`, () => expect(runId(page)).toBe(id));
@@ -583,7 +580,7 @@ export const confidenceSteps: Record<string, CaseHandler<RepoPage>> = {
 
     // back to where the next cases expect to be
     await ctx.step('Go back to the Confidence Engine page of this run', async () => {
-      const link = page.locator(`a[href*="runId=${id}"][href*="pillar=engine"]:visible`).first();
+      const link = locatorOf(page, 'confidence.css.by-a-href-runid-id-href-pillar-en', id).first();
       if (await link.count()) await link.click(); else await page.goto(home);
       await expect(pageTitle(page)).toBeVisible({ timeout: 30_000 });
     });
@@ -744,14 +741,14 @@ export const reportSteps: Record<string, CaseHandler<RepoPage>> = {
     await check('A dialog opens', () => expect(dlg).toBeVisible({ timeout: 10_000 }), row);
     if (!(await dlg.isVisible().catch(() => false))) return;
     await snap(`Metric detail dialog of "${name}"`, dlg);
-    await check(`The dialog names the metric "${name}"`, () => expect(dlg).toContainText(new RegExp(esc(name), 'i')));
+    await check(`The dialog names the metric "${name}"`, () => expect(dlg).toContainText(expectedOf('confidence.text.by-pattern-name', name)));
     await check('The dialog shows the gate name', () => expect(norm(String(dlg.innerText())).length).toBeGreaterThan(name.length + 5));
-    for (const label of ['Value', 'Status', 'Coverage']) await check(`The dialog shows "${label}"`, () => expect(dlg.getByText(new RegExp(`^\\s*${label}\\s*$`, 'i')).first()).toBeVisible());
+    for (const label of listOf('confidence.list.label-value')) await check(`The dialog shows "${label}"`, () => expect(locatorOf(dlg, 'confidence.text.by-label', label).first()).toBeVisible());
     await check('The dialog shows a coverage bar', () => expect(locatorOf(dlg, 'confidence.css.role-progressbar-class-progress-i-cl').first()).toBeVisible());
     await check('The dialog has a "Leaf metrics" table with the columns metric, value, result and coverage', async () => {
       await expect(locatorOf(dlg, 'confidence.text.leaf-metrics').first()).toBeVisible();
       const heads = (await locatorOf(dlg, 'confidence.css.th').allInnerTexts()).map((h) => norm(h).toLowerCase());
-      for (const c of ['metric', 'value', 'result', 'coverage']) expect(heads.some((h) => h.includes(c)), `column ${c} (columns: ${heads.join(', ')})`).toBe(true);
+      for (const c of listOf('confidence.list.c-metric')) expect(heads.some((h) => h.includes(c)), `column ${c} (columns: ${heads.join(', ')})`).toBe(true);
     });
     await check('The X button closes the dialog', async () => {
       await locatorOf(dlg, 'confidence.button.close-x').first().click();
@@ -771,10 +768,10 @@ export const reportSteps: Record<string, CaseHandler<RepoPage>> = {
     await box.fill(question);
     await box.press('Enter');
     note(`Sent the question: "${question}"`);
-    await check('The question appears in the thread', () => expect(page.getByText(question, { exact: false }).first()).toBeVisible({ timeout: 15_000 }), box);
+    await check('The question appears in the thread', () => expect(locatorOf(page, 'confidence.text.by-question', question).first()).toBeVisible({ timeout: 15_000 }), box);
     await check('A reply follows the question (new text appears below it within 2 minutes)', async () => {
       await expect.poll(async () => norm(await locatorOf(page, 'confidence.css.body').innerText()).length, { timeout: 120_000, intervals: [2_000] }).toBeGreaterThan(before + question.length + 40);
-    }, page.getByText(question, { exact: false }).last());
+    }, locatorOf(page, 'confidence.text.by-question', question).last());
   },
 
   'CONFASST-05': async (ctx) => {

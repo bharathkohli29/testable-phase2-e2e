@@ -1,0 +1,8 @@
+{
+  "_comment": "Module dashboard: locators with a changing part. {{0}}, {{1}} are filled from the call (the part is escaped when the entry is a regex; {{0:raw}} is used as it is).",
+
+  "dashboard.link.by-name": { "role": "link", "name": "{{0:raw}}", "match": "exact", "pick": "all" },
+  "dashboard.text.by-pair": { "text": "{{0:raw}}", "match": "exact", "pick": "all" },
+  "dashboard.option.by-other": { "role": "option", "name": "{{0:raw}}", "match": "exact", "pick": "all" },
+  "dashboard.text.by-name-branch": { "text": "{{0}} / {{1}}", "match": "exact", "pick": "all" }
+}

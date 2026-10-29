@@ -1,0 +1,5 @@
+{
+  "object.text.by-0-9a-f-7-q-id": {"regex":"{{0}}.*[0-9a-f]{7}.*{{1:raw}}","flags":"i"},
+  "object.attr.by-runid-id": {"regex":"runId={{0:raw}}"},
+  "object.attr.by-runid-pillar-engine-pillar-engine-id": {"regex":"runId={{0:raw}}.*pillar=engine|pillar=engine.*runId={{0:raw}}"}
+}

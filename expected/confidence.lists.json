@@ -1,0 +1,12 @@
+{
+  "confidence.list.stages": {"list": ["Queued","Admitted","Syncing repository","Detecting languages & signals","Planning analysis","Running analysis tasks","Scoring & taxonomy","Publishing projections"]},
+  "confidence.list.columns": {"list": ["Classification","Value","Execution status","Result","Coverage"]},
+  "confidence.list.label-confidence-score": {"list": ["Confidence Score","Whitebox Score","Blackbox Score","Validations Passed"]},
+  "confidence.list.gate-pipeline-gate": {"list": ["Pipeline Gate","Whitebox Confidence","Blackbox Confidence"]},
+  "confidence.list.label-total": {"list": ["Total","Passed","Failed","Coverage","Retries","Loop","Pass Rate"]},
+  "confidence.list.k-coverage": {"list": ["Coverage","Pass Rate"]},
+  "confidence.list.n-about-confidence-object": {"list": ["About Confidence Object","About Confidence Graph","About Confidence Engine"]},
+  "confidence.list.name-notifications": {"list": ["Notifications","Support"]},
+  "confidence.list.label-value": {"list": ["Value","Status","Coverage"]},
+  "confidence.list.c-metric": {"list": ["metric","value","result","coverage"]}
+}

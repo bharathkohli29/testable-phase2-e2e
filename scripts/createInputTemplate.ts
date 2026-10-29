@@ -81,4 +81,4 @@ for (const ws of caseSheets) beautifyCaseSheet(ws);
 ensureKeywordSheets(wb);
 
 fs.mkdirSync(path.dirname(OUT), { recursive: true });
-wb.xlsx.writeFile(OUT).then(() => console.log(`Created ${OUT}\nFill the yellow cells on the Input sheet (email / password / AWS keys), then run: npm test`));
+wb.xlsx.writeFile(OUT).then(() => console.log(`Created ${OUT}\nPut the branch link on the Input sheet (yellow cell) and your accounts / URLs in the .env file (see .env.example), then run: npm test`));

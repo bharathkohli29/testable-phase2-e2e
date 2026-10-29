@@ -75,10 +75,10 @@ export const planSteps: Record<string, CaseHandler<RepoPage>> = {
     const short = repo.split('/').pop() as string;
     const escaped = esc(short);
     await check('"Project" is shown', () => expect(locatorOf(card, 'plan.text.project').first()).toBeVisible());
-    await check(`The project is "${short}"`, () => expect(valueOf(card, ci('Project'))).toHaveText(new RegExp(`^\\s*${escaped}\\s*$`, 'i')));
+    await check(`The project is "${short}"`, () => expect(valueOf(card, ci('Project'))).toHaveText(expectedOf('plan.text.by-pattern-escaped', escaped)));
     await check('"Repository" is shown', () => expect(locatorOf(card, 'plan.text.repository').first()).toBeVisible());
     await check(`The repository is "<owner>/${short}" (the owner can differ: two repos are named ${short})`, () =>
-      expect(valueOf(card, ci('Repository'))).toHaveText(new RegExp(`^\\s*[^/]+/${escaped}\\s*$`, 'i')));
+      expect(valueOf(card, ci('Repository'))).toHaveText(expectedOf('plan.text.by-pattern-escaped-2', escaped)));
     await snap('Project and repository on the Run plan', locatorOf(card, 'plan.text.project').first());
     note(`Repository shown: ${((await valueOf(card, ci('Repository')).innerText().catch(() => '')) || '').trim()}`);
   },
@@ -94,9 +94,9 @@ export const planSteps: Record<string, CaseHandler<RepoPage>> = {
     await check('The "Branch to analyze" group is shown', () => expect(group).toBeVisible());
     await check('It lists exactly one branch', () => expect(locatorOf(group, 'plan.radio.item')).toHaveCount(1));
     await check('That branch is selected', () => expect(locatorOf(group, 'plan.radio.item').first()).toBeChecked());
-    await check(`The branch is "${branch}"`, () => expect(locatorOf(group, 'plan.radio.item').first()).toContainText(has(branch)));
-    await check('Its tip SHA is a commit id', () => expect(locatorOf(group, 'plan.radio.item').first()).toHaveText(/[0-9a-f]{7,40}\s*$/i));
-    await check(`The tip SHA is the one the Coverage preview showed (${commit})`, () => expect(locatorOf(group, 'plan.radio.item').first()).toContainText(has(commit)));
+    await check(`The branch is "${branch}"`, () => expect(locatorOf(group, 'plan.radio.item').first()).toContainText(expectedOf('plan.text.by-pattern-branch', branch)));
+    await check('Its tip SHA is a commit id', () => expect(locatorOf(group, 'plan.radio.item').first()).toHaveText(expectedOf('plan.text.by-0-9a-f-7-40')));
+    await check(`The tip SHA is the one the Coverage preview showed (${commit})`, () => expect(locatorOf(group, 'plan.radio.item').first()).toContainText(expectedOf('plan.text.by-pattern-commit', commit)));
     await snap('Branch to analyze with its tip SHA', group);
   },
 
@@ -110,7 +110,7 @@ export const planSteps: Record<string, CaseHandler<RepoPage>> = {
       const item = locatorOf(card, 'plan.listitem.item').filter({ hasText: title }).last();
       await check(`Axis ${i + 1} is "${title}"`, async () => {
         await expect(item).toBeVisible();
-        await expect(item).toContainText(new RegExp(`^\\s*${i + 1}`));
+        await expect(item).toContainText(expectedOf('plan.text.by-pattern-i', i + 1));
       });
     }
     await snap('Analysis axes (taxonomy) list', locatorOf(card, 'plan.text.analysis-axes-taxonomy').first());

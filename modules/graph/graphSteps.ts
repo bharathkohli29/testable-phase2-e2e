@@ -6,7 +6,7 @@ import { inputs } from '../flow/helpers';
 import { RepoPage } from '../repo/shared/RepoPage';
 import { obj as locatorOf } from '../../core/keywords/obj';
 
-import { expected as expectedOf } from '../../core/keywords/expected';
+import { expected as expectedOf, listOf } from '../../core/keywords/expected';
 /**
  * The Confidence Graph module: every part of /confidence-engine?pillar=graph for the run that just finished.
  * Verified live. Checks use locators (roles, names, labels, text, table cells, chart elements) and the same run API calls the page
@@ -105,7 +105,7 @@ export const graphSteps: Record<string, CaseHandler<RepoPage>> = {
     await snap('Left menu of the Confidence Graph page', menu);
     for (const [name, href] of [['Dashboard', '/dashboard'], ['Confidence Engine', '/confidence-engine'], ['Execution Assistant', '/execution-assistant'], ['Account and Plan', '/account']] as const) {
       await check(`Left menu link "${name}" is shown and goes to ${href}`, async () => {
-        const link = menu.getByRole('link', { name: new RegExp(`^\\s*${esc(name)}\\s*$`, 'i') }).first();
+        const link = locatorOf(menu, 'graph.link.by-name', name).first();
         await expect(link).toBeVisible();
         await expect(link).toHaveAttribute('href', new RegExp(href));
       });
@@ -117,12 +117,12 @@ export const graphSteps: Record<string, CaseHandler<RepoPage>> = {
       const m = norm(await meter.innerText()).match(/Executions:\s*(\d+)\s*\/\s*(\d+)/)!;
       expect(num(m[1])).toBeLessThanOrEqual(num(m[2]));
     });
-    for (const b of ['Sign out', 'Notifications', 'Support']) await check(`The "${b}" button is shown`, () => expect(page.getByRole('button', { name: new RegExp(`^\\s*${esc(b)}\\s*$`, 'i') }).first()).toBeVisible());
+    for (const b of listOf('graph.list.b-sign-out')) await check(`The "${b}" button is shown`, () => expect(locatorOf(page, 'graph.button.by-b', b).first()).toBeVisible());
     for (const [name, pillar] of [['Confidence Object', 'object'], ['Confidence Graph', 'graph'], ['Confidence Engine', 'engine']] as const) {
       await check(`The top link "${name}" points to this run with pillar=${pillar}`, async () => {
-        const link = page.locator(`a[href*="/confidence-engine"][href*="pillar=${pillar}"]`).first();
+        const link = locatorOf(page, 'graph.css.by-a-href-confidence-engine-href', pillar).first();
         await expect(link).toBeVisible();
-        await expect(link).toHaveAttribute('href', new RegExp(`runId=${runId(page)}`));
+        await expect(link).toHaveAttribute('href', expectedOf('graph.attr.by-runid-runId', runId(page)));
       });
     }
     await check('"Closed-Loop Intel" is marked COMING SOON', () => expect(comingSoonCard(page).first()).toBeVisible());
@@ -154,7 +154,7 @@ export const graphSteps: Record<string, CaseHandler<RepoPage>> = {
     await check('The "Branch run" selector is shown with this run', async () => {
       const s = locatorOf(page, 'graph.combobox.branch-run');
       await expect(s).toBeVisible();
-      await expect(s).toContainText(new RegExp(esc(runId(page).slice(0, 8)), 'i'));
+      await expect(s).toContainText(expectedOf('graph.text.by-pattern-runId', runId(page).slice(0, 8)));
     });
     note('"Submit question" is only checked, never clicked (a click would send a question).');
   },
@@ -317,7 +317,7 @@ export const graphSteps: Record<string, CaseHandler<RepoPage>> = {
     note(`The "N recent executions" line on the page reads: ${norm(await locatorOf(page, 'graph.text.recent-executions').first().innerText().catch(() => '(not found)'))}; the runs list API has ${list.length} run(s) on this branch.`);
     await check('The table has the columns Run ID, Trigger, Story, Time, Duration, Status and Score', async () => {
       const heads = (await locatorOf(historyTable(page), 'graph.css.thead-th').allInnerTexts()).map((h) => norm(h).toLowerCase());
-      for (const c of ['Run ID', 'Trigger', 'Story', 'Time', 'Duration', 'Status', 'Score']) expect(heads.some((h) => h.includes(c.toLowerCase())), `column ${c} (columns: ${heads.join(', ')})`).toBe(true);
+      for (const c of listOf('graph.list.c-run-id')) expect(heads.some((h) => h.includes(c.toLowerCase())), `column ${c} (columns: ${heads.join(', ')})`).toBe(true);
     });
     const rows = runRows(page);
     await check('There is one row for every run of this branch (up to one page)', async () => expect(await rows.count()).toBe(Math.min(list.length, 10)));
@@ -328,7 +328,7 @@ export const graphSteps: Record<string, CaseHandler<RepoPage>> = {
     for (const r of list.slice(0, 10)) {
       const row = rows.filter({ hasText: r.run_id.slice(0, 8) }).first();
       const label = `Run ${r.run_id.slice(0, 8)}`;
-      await check(`${label}: the row is shown with a shortened id ending in "…"`, async () => { await expect(row).toBeVisible(); await expect(locatorOf(row, 'graph.css.td').nth(0)).toContainText(/…|\.\.\./); }, row);
+      await check(`${label}: the row is shown with a shortened id ending in "…"`, async () => { await expect(row).toBeVisible(); await expect(locatorOf(row, 'graph.css.td').nth(0)).toContainText(expectedOf('graph.text.by-pattern')); }, row);
       await check(`${label}: Trigger is "${r.trigger_type}"`, async () => {
         const got = (await locatorOf(row, 'graph.css.td').nth(1).innerText()).toLowerCase().replace(/[^a-z0-9]/g, '');
         expect(got, 'Trigger cell').toContain(r.trigger_type.toLowerCase().replace(/[^a-z0-9]/g, ''));
@@ -346,7 +346,7 @@ export const graphSteps: Record<string, CaseHandler<RepoPage>> = {
         const got = norm(await locatorOf(row, 'graph.css.td').nth(4).innerText());
         expect(Math.abs(seconds(got) - (r.duration_seconds ?? 0)), `shows "${got}"`).toBeLessThanOrEqual(60);
       }, locatorOf(row, 'graph.css.td').nth(4));
-      await check(`${label}: Status shows a rating word`, () => expect(locatorOf(row, 'graph.css.td').nth(5)).toHaveText(/\S/), locatorOf(row, 'graph.css.td').nth(5));
+      await check(`${label}: Status shows a rating word`, () => expect(locatorOf(row, 'graph.css.td').nth(5)).toHaveText(expectedOf('graph.text.by-pattern-2')), locatorOf(row, 'graph.css.td').nth(5));
       if (r.overall_score !== null) await check(`${label}: Score is ${Math.round(r.overall_score)} (the runs list says ${r.overall_score})`, async () =>
         expect(Math.abs(num(await locatorOf(row, 'graph.css.td').nth(6).innerText()) - r.overall_score!)).toBeLessThanOrEqual(1), locatorOf(row, 'graph.css.td').nth(6));
     }
@@ -487,7 +487,7 @@ export const graphSteps: Record<string, CaseHandler<RepoPage>> = {
     const back = locatorOf(page, 'graph.link.back-to-confidence-engine');
     await check('"Back to Confidence Engine" is shown and goes to the engine page of this run', async () => {
       await expect(back).toBeVisible();
-      await expect(back).toHaveAttribute('href', new RegExp(`runId=${id}.*pillar=engine|pillar=engine.*runId=${id}`));
+      await expect(back).toHaveAttribute('href', expectedOf('graph.attr.by-runid-pillar-engine-pillar-engine-id', id));
     });
     await ctx.step('Click "Back to Confidence Engine"', async () => {
       await back.click();

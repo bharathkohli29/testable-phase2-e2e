@@ -4,12 +4,12 @@ import { RepoPage } from '../repo/shared/RepoPage';
 import { bodyText, closeSupport, norm, open, supportButton, supportItem } from '../flow/ui';
 import { obj as locatorOf } from '../../core/keywords/obj';
 
-import { expected as expectedOf } from '../../core/keywords/expected';
+import { expected as expectedOf, listOf } from '../../core/keywords/expected';
 /**
  * The Support module: the round Support button, Live Chat (tawk.to), the "Open a support ticket" dialog, the User Guide and the Support
  * centre. Verified live on QA (15 Oct). Nothing is ever SENT: no chat message, no ticket, no file. "Submit ticket" is never clicked.
  */
-const TOPICS = ['Confidence Engine — run failed', 'Confidence Engine — score interpretation', 'Whitebox / Blackbox gates', 'Taxonomy or compliance mapping', 'CI/CD integration', 'API or SDK', 'Billing or account', 'Other'];
+const TOPICS = listOf('support.list.topics');
 /** Same words whatever the dash, slash or spacing. */
 const letters = (s: string): string => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 
@@ -68,7 +68,7 @@ export const supportSteps: Record<string, CaseHandler<RepoPage>> = {
     await btn.click();
     const menu = locatorOf(page, 'support.menu.item');
     await check('Pressing it opens a menu', () => expect(menu).toBeVisible());
-    for (const item of ['Live Chat', 'Submit a Request', 'User Guide']) {
+    for (const item of listOf('support.list.item-live-chat')) {
       await check(`The menu offers "${item}"`, () => expect(supportItem(page, new RegExp(`^\\s*${item}\\s*$`, 'i'))).toBeVisible(), menu);
     }
     await snap('Support menu', menu);
@@ -98,8 +98,8 @@ export const supportSteps: Record<string, CaseHandler<RepoPage>> = {
     await supportItem(page, /live chat/i).click();
     const frame = await chatFrame(page);
     if (!frame) { await check('A chat window opens', () => expect(frame, 'no chat window appeared').toBeDefined()); await closeSupport(page); return; }
-    for (const reply of ['I have a question', 'Tell me more']) {
-      await check(`The quick reply "${reply}" is offered (it is not pressed, so nothing is sent)`, () => expect(frame.getByText(new RegExp(`^\\s*${reply}\\s*$`, 'i')).first()).toBeVisible());
+    for (const reply of listOf('support.list.reply-i-have-a-question')) {
+      await check(`The quick reply "${reply}" is offered (it is not pressed, so nothing is sent)`, () => expect(locatorOf(frame, 'support.text.by-reply', reply).first()).toBeVisible());
     }
     await check('A paperclip (attach file) button is shown in the message bar', async () => {
       const n = await locatorOf(frame, 'support.css.aria-label-attach-i-title-attach-i-c').count();
@@ -121,11 +121,11 @@ export const supportSteps: Record<string, CaseHandler<RepoPage>> = {
     await check('The dialog is titled "Open a support ticket"', () => expect(locatorOf(dlg, 'support.heading.open-a-support-ticket')).toBeVisible());
     await check('It says "Tell us what\'s happening. We\'ll route to the right team and reply within 1 business day."', () =>
       expect(dlg).toContainText(expectedOf('support.text.tell-us-what-s-happening')));
-    for (const label of ['Your name', 'Email', 'Topic', "What's going on?"]) {
-      await check(`The field "${label}" is shown`, () => expect(dlg.getByText(new RegExp(`^\\s*${label.replace(/[?']/g, '.?')}\\s*$`, 'i')).first()).toBeVisible());
+    for (const label of listOf('support.list.label-your-name')) {
+      await check(`The field "${label}" is shown`, () => expect(locatorOf(dlg, 'support.text.by-reply', label.replace(/[?']/g, '.?')).first()).toBeVisible());
     }
-    for (const b of ['Attach file', 'Cancel', 'Submit ticket']) {
-      await check(`The button "${b}" is shown`, () => expect(dlg.getByRole('button', { name: new RegExp(`^\\s*${b}\\s*$`, 'i') }).first()).toBeVisible());
+    for (const b of listOf('support.list.b-attach-file')) {
+      await check(`The button "${b}" is shown`, () => expect(locatorOf(dlg, 'support.button.by-b', b).first()).toBeVisible());
     }
     await snap('Support ticket dialog', dlg);
     await closeSupport(page);
@@ -242,8 +242,8 @@ export const supportSteps: Record<string, CaseHandler<RepoPage>> = {
     await open(page, input, '/docs/introduction');
     const nav = locatorOf(page, 'support.css.aside').first();
     await expect(nav).toBeVisible({ timeout: 20_000 });
-    const groups = ['Getting Started', 'Authentication', 'SCM Connection', 'Whitebox Execution', 'Confidence Engine', 'Reference'];
-    for (const g of groups) await check(`The guide menu has the group "${g}"`, () => expect(nav.getByText(new RegExp(`^\\s*${g}\\s*$`, 'i')).first()).toBeVisible());
+    const groups = listOf('support.list.groups');
+    for (const g of groups) await check(`The guide menu has the group "${g}"`, () => expect(locatorOf(nav, 'support.text.by-reply', g).first()).toBeVisible());
     const hrefs = [...new Set(await locatorOf(nav, 'support.css.a-href-docs').evaluateAll((els) => els.map((e) => e.getAttribute('href') || '')))];
     note(`Guide pages in the menu: ${hrefs.length}`);
     await check('The guide menu lists at least 10 pages', () => expect(hrefs.length).toBeGreaterThanOrEqual(10));
@@ -271,7 +271,7 @@ export const supportSteps: Record<string, CaseHandler<RepoPage>> = {
     });
     await check('The module table lists Authentication, SCM Connection, Whitebox Execution and Confidence Engine', async () => {
       const t = norm(await locatorOf(article, 'support.css.table').first().innerText());
-      for (const m of ['Authentication', 'SCM Connection', 'Whitebox Execution', 'Confidence Engine']) expect(t, m).toMatch(new RegExp(m, 'i'));
+      for (const m of listOf('support.list.m-authentication')) expect(t, m).toMatch(new RegExp(m, 'i'));
     });
     await snap('User Guide introduction', locatorOf(article, 'support.heading.testable-platform-user-guide').first());
     await check('"Next →" opens the next guide page (/docs/register)', async () => {

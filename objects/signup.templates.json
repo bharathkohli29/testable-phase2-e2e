@@ -1,0 +1,10 @@
+{
+  "_comment": "Module signup: locators with a changing part. {{0}}, {{1}} are filled from the call (the part is escaped when the entry is a regex; {{0:raw}} is used as it is).",
+
+  "signup.css.by-id": { "css": "#{{0:raw}}", "pick": "all" },
+  "signup.button.by-name": { "role": "button", "name": "{{0:raw}}", "match": "regex", "pick": "all" },
+  "signup.option.by-name": { "role": "option", "name": "^\\s*{{0:raw}}", "match": "regex", "pick": "all" },
+  "signup.button.by-name-2": { "role": "button", "name": "^\\s*{{0:raw}}", "match": "regex", "pick": "all" },
+  "signup.button.by-continue-with-label": { "role": "button", "name": "Continue with {{0}}", "match": "loose", "pick": "all" },
+  "signup.link.by-name": { "role": "link", "name": "{{0:raw}}", "match": "loose-exact", "pick": "all" }
+}

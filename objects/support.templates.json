@@ -1,0 +1,6 @@
+{
+  "_comment": "Module support: locators with a changing part. {{0}}, {{1}} are filled from the call (the part is escaped when the entry is a regex; {{0:raw}} is used as it is).",
+
+  "support.text.by-reply": { "text": "^\\s*{{0:raw}}\\s*$", "match": "regex", "pick": "all" },
+  "support.button.by-b": { "role": "button", "name": "^\\s*{{0:raw}}\\s*$", "match": "regex", "pick": "all" }
+}

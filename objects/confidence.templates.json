@@ -1,0 +1,13 @@
+{
+  "_comment": "Module confidence: locators with a changing part. {{0}}, {{1}} are filled from the call (the part is escaped when the entry is a regex; {{0:raw}} is used as it is).",
+
+  "confidence.button.by-t": { "role": "button", "name": "{{0:raw}}", "match": "playwright", "exact": true, "pick": "all" },
+  "confidence.css.by-a-href-confidence-engine-href": { "css": "a[href*=\"/confidence-engine\"][href*=\"pillar={{0:raw}}\"]:visible", "pick": "all" },
+  "confidence.link.by-name": { "role": "link", "name": "{{0:raw}}", "match": "exact", "pick": "all" },
+  "confidence.label.by-about-n": { "label": "About {{0}}", "match": "exact", "pick": "all" },
+  "confidence.button.by-n": { "role": "button", "name": "{{0:raw}}", "match": "exact", "pick": "all" },
+  "confidence.button.by-name": { "role": "button", "name": "^\\s*{{0:raw}}\\b", "match": "regex", "pick": "all" },
+  "confidence.css.by-a-href-runid-id-href-pillar-en": { "css": "a[href*=\"runId={{0:raw}}\"][href*=\"pillar=engine\"]:visible", "pick": "all" },
+  "confidence.text.by-label": { "text": "^\\s*{{0:raw}}\\s*$", "match": "regex", "pick": "all" },
+  "confidence.text.by-question": { "text": "{{0:raw}}", "match": "playwright", "pick": "all" }
+}

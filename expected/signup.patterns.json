@@ -1,0 +1,3 @@
+{
+  "signup.attr.by-https-www-testable-io-path": {"regex":"^https://(www\\.)?testable\\.io/{{0:raw}}","flags":"i"}
+}

@@ -1,0 +1,7 @@
+{
+  "_comment": "Module login: locators with a changing part. {{0}}, {{1}} are filled from the call (the part is escaped when the entry is a regex; {{0:raw}} is used as it is).",
+
+  "login.text.by-data": { "text": "{{0:raw}}", "match": "loose", "pick": "all" },
+  "login.button.by-sign-in-with-providername": { "role": "button", "name": "Sign in with {{0:raw}}", "match": "playwright", "pick": "all" },
+  "login.text.by-name": { "text": "{{0:raw}}", "match": "playwright", "exact": true, "pick": "all" }
+}

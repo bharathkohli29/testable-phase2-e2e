@@ -1,0 +1,4 @@
+{
+  "dashboard.attr.by-pattern-href": {"regex":"^{{0:raw}}"},
+  "dashboard.text.by-current-name-branch": {"regex":"Current:\\s*{{0}}\\s*/\\s*{{1}}","flags":"i"}
+}

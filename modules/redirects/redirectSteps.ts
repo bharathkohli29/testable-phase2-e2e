@@ -80,7 +80,7 @@ export const redirectSteps: Record<string, CaseHandler<RepoPage>> = {
     await snap('Left menu', menu);
     for (const [name, path] of items) {
       await check(`The left menu item "${name}" opens ${path.source.replace(/\\/g, '')}`, async () => {
-        await menu.getByRole('link', { name: new RegExp(`^\\s*${name}\\s*$`, 'i') }).click();
+        await locatorOf(menu, 'redirects.link.by-name', name).click();
         await expect(page).toHaveURL(path);
         await expect(locatorOf(page, 'redirects.button.sign-out').first()).toBeVisible();
       });

@@ -4,20 +4,16 @@ import { inputs } from '../flow/helpers';
 import { RepoPage, ci, esc, flex, has } from '../repo/shared/RepoPage';
 import { obj as locatorOf } from '../../core/keywords/obj';
 
-import { expected as expectedOf } from '../../core/keywords/expected';
+import { expected as expectedOf, listOf } from '../../core/keywords/expected';
 /**
  * Step 6 of the journey: the "Coverage preview" and "Review branches" cards that appear right after "Confirm repository".
  * Verified live (C-_Stack / Scholarship-CMGroups-negative). Values depend on the repository and branch, so the checks look
  * for real values rather than fixed ones.
  */
-const AREAS = [
-  'Code Duplication', 'Code Quality Auditing', 'Cognitive Complexity', 'Cyclomatic Complexity', 'Dependency Risk (SCA)',
-  'Lint / Rule Violations', 'Readability / Maintainability', 'Security White-box Testing', 'Static Code Analysis',
-  'Static Vulnerabilities (SAST)', 'Structural Analysis',
-];
+const AREAS = listOf('coverage.list.areas');
 
 /** The element right after a label (its value). */
-const valueOf = (page: Page, label: string): Locator => locatorOf(page.getByText(ci(label)).last(), 'coverage.css.xpath-following-sibling-1');
+const valueOf = (page: Page, label: string): Locator => locatorOf(locatorOf(page, 'coverage.text.by-label', label).last(), 'coverage.css.xpath-following-sibling-1');
 const txt = async (l: Locator): Promise<string> => ((await l.innerText().catch(() => '')) || '').trim();
 
 export const coverageSteps: Record<string, CaseHandler<RepoPage>> = {
@@ -44,14 +40,14 @@ export const coverageSteps: Record<string, CaseHandler<RepoPage>> = {
 'COV-002': async (ctx) => {
     const { snap, page, check, note } = ctx;
     const { branch } = inputs(ctx, { branches: 1 });
-    await check(`Branch is "${branch}"`, () => expect(valueOf(page, 'Branch')).toHaveText(new RegExp(`^\\s*${esc(branch)}\\s*$`, 'i')));
-    await check('Commit is a short commit id', () => expect(valueOf(page, 'Commit')).toHaveText(/^[0-9a-f]{6,40}$/i));
+    await check(`Branch is "${branch}"`, () => expect(valueOf(page, 'Branch')).toHaveText(expectedOf('coverage.text.by-pattern-branch', branch)));
+    await check('Commit is a short commit id', () => expect(valueOf(page, 'Commit')).toHaveText(expectedOf('coverage.text.by-0-9a-f-6-40')));
     await check('Checked says when it was analysed', () => expect(valueOf(page, 'Checked')).toHaveText(expectedOf('coverage.text.ago-just-now-today-yesterday')));
     await snap('Branch, commit and checked time on the Coverage preview', valueOf(page, 'Branch'));
     const commit = await txt(valueOf(page, 'Commit'));
     note(`Checked: ${await txt(valueOf(page, 'Checked'))}`);
     await check('The top bar "Repository ready · <repo> · <branch> · <commit>" matches the card', () =>
-      expect(locatorOf(locatorOf(page, 'coverage.text.repository-ready').first(), 'coverage.css.xpath')).toContainText(new RegExp(`${esc(branch)}.*${esc(commit.slice(0, 7))}`, 'i')));
+      expect(locatorOf(locatorOf(page, 'coverage.text.repository-ready').first(), 'coverage.css.xpath')).toContainText(expectedOf('coverage.text.by-pattern-branch-commit', branch, commit.slice(0, 7))));
   },
 
 'COV-003': async (ctx) => {
@@ -67,7 +63,7 @@ export const coverageSteps: Record<string, CaseHandler<RepoPage>> = {
     ];
     for (const [label, pattern] of rows) {
       await check(`"${label}" is listed with a value`, async () => {
-        await expect(page.getByText(ci(label)).last()).toBeVisible();
+        await expect(locatorOf(page, 'coverage.text.by-label', label).last()).toBeVisible();
         await expect(valueOf(page, label)).toHaveText(pattern);
         await expect(valueOf(page, label)).not.toHaveText(expectedOf('coverage.text.n-a-not-detected'));
       });
@@ -89,13 +85,13 @@ export const coverageSteps: Record<string, CaseHandler<RepoPage>> = {
     await check('The subtitle names some analysis techniques followed by "and more" (the names may differ)', () => expect(shown, 'no subtitle like "A, B, C and more" was found').not.toBe(''));
     await check('Every technique named in the subtitle is also in the list below', async () => {
       const named = shown.replace(/\s+and more$/i, '').split(/,\s*/).map((x) => x.trim()).filter(Boolean);
-      for (const n of named) await expect(page.getByText(flex(n)).last(), `"${n}"`).toBeVisible();
+      for (const n of named) await expect(locatorOf(page, 'coverage.text.by-n', n).last(), `"${n}"`).toBeVisible();
     });
     await check('"Testable will evaluate your repository across:" is shown', () =>
       expect(locatorOf(page, 'coverage.text.testable-will-evaluate-your-reposito').last()).toBeVisible());
     await snap('"What we\'ll analyze" list is open', locatorOf(page, 'coverage.text.testable-will-evaluate-your-reposito').last());
     for (const area of AREAS) {
-      await check(`Analysis area "${area}"`, () => expect(page.getByText(flex(area)).last()).toBeVisible());
+      await check(`Analysis area "${area}"`, () => expect(locatorOf(page, 'coverage.text.by-n', area).last()).toBeVisible());
     }
   },
 
@@ -158,14 +154,14 @@ export const coverageSteps: Record<string, CaseHandler<RepoPage>> = {
     await check('"Ready — continue to build the run plan, or change the branch first." is shown', () =>
       expect(card).toContainText(expectedOf('coverage.text.continue-to-build-the-run')));
     const row = locatorOf(card, 'coverage.listitem.item').first();
-    await check(`The branch row shows the correct branch name "${branch}"`, () => expect(row).toContainText(has(branch)));
+    await check(`The branch row shows the correct branch name "${branch}"`, () => expect(row).toContainText(expectedOf('coverage.text.by-pattern-branch-2', branch)));
     await check('The branch row has a tick mark and a branch icon', async () => {
       await expect(locatorOf(row, 'coverage.css.svg').first()).toBeVisible();
       expect(await locatorOf(row, 'coverage.css.svg').count()).toBeGreaterThanOrEqual(2);
     });
     await check('It shows the same status as the Coverage preview', async () => {
       const status = await txt(locatorOf(locatorOf(page, 'coverage.text.coverage-preview').last(), 'coverage.css.xpath-following-sibling-1'));
-      await expect(card).toContainText(has(status.replace(/\s+/g, ' ')));
+      await expect(card).toContainText(expectedOf('coverage.text.by-pattern-status', status.replace(/\s+/g, ' ')));
     });
     await check('"Change branch" is offered', () => expect(locatorOf(card, 'coverage.button.change-branch')).toBeVisible());
     await check('"Continue" is enabled', () => expect(locatorOf(card, 'coverage.button.continue')).toBeEnabled());

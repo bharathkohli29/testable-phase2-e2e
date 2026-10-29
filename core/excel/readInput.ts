@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import { INPUT_FILE } from '../paths';
 import { CREDENTIALS, credentialFromEnv, loadDotEnv } from '../env';
 import { registerSecretValues } from '../secrets';
+import { parseBranchUrls } from './branchUrl';
 import { EnvName, InputConfig, TestCaseRow } from '../types';
 
 const norm = (v: unknown): string => String(v ?? '').trim();
@@ -40,7 +41,7 @@ export function loadInput(): InputConfig {
   // Credentials (e-mail, password, AWS keys) come from the file .env (or real environment variables) - see core/env.ts.
   // A value there always wins. A credential that is still typed into the Input sheet is used only when .env has none, and is reported
   // by the Input sheet check so it can be moved.
-  loadDotEnv();
+  const dotEnvNames = loadDotEnv();
   const sheetCredentials: string[] = [];
   for (const k of Object.keys(CREDENTIALS)) {
     const fromEnv = credentialFromEnv(k);
@@ -54,6 +55,22 @@ export function loadInput(): InputConfig {
     if (SECRET_KEY.test(k) && process.env[k] && !(k in CREDENTIALS)) raw[k] = String(process.env[k]).trim();
   }
 
+  // Every other name written in .env (base URLs, buckets, site-code path, ...) is a setting of the machine / environment: it wins over the sheet too.
+  for (const k of dotEnvNames) {
+    const v = process.env[k];
+    if (v !== undefined && v.trim() !== '' && !(k in CREDENTIALS)) raw[k.toUpperCase()] = v.trim();
+  }
+  if ((process.env.TEST_ENV ?? '').trim()) raw.ENV = process.env.TEST_ENV!.trim();
+
+  // The branch to run is given as a link (BRANCH_URL). It fills REPO and BRANCHES; the old two cells still work when there is no link.
+  const branchUrlProblems: string[] = [];
+  if (raw.BRANCH_URL && !process.env.BRANCHES_OVERRIDE) {
+    const t = parseBranchUrls(raw.BRANCH_URL);
+    branchUrlProblems.push(...t.problems);
+    if (t.repo && !process.env.REPO_OVERRIDE) raw.REPO = t.repo;
+    if (t.branches.length) raw.BRANCHES = t.branches.join(',');
+  }
+
   const envName = (raw.ENV || 'QA').toUpperCase();
   if (envName !== 'QA' && envName !== 'DEV') throw new Error(`Input sheet: ENV must be QA or DEV (got "${raw.ENV}")`);
   const env = envName as EnvName;
@@ -65,7 +82,7 @@ export function loadInput(): InputConfig {
   const resolve = (text: string): string => text.replace(/\{\{\s*([A-Za-z0-9_]+)\s*\}\}/g, (_m, k: string) => get(k));
 
   const baseUrl = get('BASE_URL').replace(/\/+$/, '');
-  if (!baseUrl) throw new Error(`Input sheet: ${env}_BASE_URL is empty`);
+  if (!baseUrl) throw new Error(`${env}_BASE_URL is empty. Put ${env}_BASE_URL=https://... in the .env file (or on the Input sheet).`);
 
   return {
     env,
@@ -78,6 +95,7 @@ export function loadInput(): InputConfig {
     writeResultsToInput: !/^(n|no|false|0)$/i.test(raw.WRITE_RESULTS_TO_INPUT || 'Y'),
     raw,
     sheetCredentials,
+    branchUrlProblems,
     get,
     resolve,
   };

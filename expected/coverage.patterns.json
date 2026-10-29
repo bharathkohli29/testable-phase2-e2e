@@ -1,0 +1,7 @@
+{
+  "coverage.text.by-pattern-branch": {"regex":"^\\s*{{0}}\\s*$","flags":"i"},
+  "coverage.text.by-0-9a-f-6-40": {"regex":"^[0-9a-f]{6,40}$","flags":"i"},
+  "coverage.text.by-pattern-branch-commit": {"regex":"{{0}}.*{{1}}","flags":"i"},
+  "coverage.text.by-pattern-branch-2": {"regex":"{{0}}","flags":"i"},
+  "coverage.text.by-pattern-status": {"regex":"{{0}}","flags":"i"}
+}

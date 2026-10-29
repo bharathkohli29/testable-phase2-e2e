@@ -203,7 +203,7 @@ export class RepoPage {
   /** A repository row in the "Choose a repository" dialog (or in the table of 5). Name only, owner prefix is ignored. */
   repoRow(repo: string): Locator {
     const name = repo.split('/').pop() ?? repo;
-    return this.page.getByRole('button', { name: new RegExp(`^${esc(name)}\\s+(Public|Private|Internal)\\b`, 'i') });
+    return locatorOf(this.page, 'repo.button.by-name-public-private-internal', name);
   }
 
   /** View all -> search -> click the repository -> wait for the Configure card (the repository list is already loaded). */
@@ -237,18 +237,18 @@ export class RepoPage {
 
   /** Value next to a label of the GitHub card (Provider / Organization / Repositories / Status). The labels are capitalised by CSS only. */
   scmValue(label: string): Locator {
-    return locatorOf(this.page.getByText(ci(label)).last(), 'repo.css.xpath-following-sibling-1');
+    return locatorOf(locatorOf(this.page, 'repo.text.by-col', label).last(), 'repo.css.xpath-following-sibling-1');
   }
 
   /** Value next to a label of the "Branches & triggers" summary (Repository / Default branch / Branches available). */
   summaryValue(label: string): Locator {
-    return locatorOf(this.page.getByText(ci(label)).last(), 'repo.css.xpath-following-sibling-1');
+    return locatorOf(locatorOf(this.page, 'repo.text.by-col', label).last(), 'repo.css.xpath-following-sibling-1');
   }
 
   // ───────────── branches ─────────────
   /** Branch chip on the Configure card. Its accessible name is "<branch>" or "<branch>default" (the tag has no space - checked live). */
   chip(branch: string): Locator {
-    return this.page.getByRole('radio', { name: new RegExp(`^\\s*${esc(branch)}(\\s*default)?\\s*$`, 'i') }).last();
+    return locatorOf(this.page, 'repo.radio.by-branch-default', branch).last();
   }
 
   async openBranchDialog(): Promise<void> {
@@ -261,10 +261,10 @@ export class RepoPage {
   async selectBranchViaDialog(branch: string): Promise<void> {
     await this.openBranchDialog();
     await this.branchSearch.fill(branch);
-    const row = this.branchDialog.getByText(new RegExp(`^\\s*${esc(branch)}\\s*$`, 'i')).first();
+    const row = locatorOf(this.branchDialog, 'repo.text.by-repo', branch).first();
     await expect(row, `branch ${branch} is found by the search`).toBeVisible({ timeout: 15_000 });
     await row.click();
-    await expect(this.branchDialog.getByText(new RegExp(`${esc(branch)}\\s+selected`, 'i')).first()).toBeVisible();
+    await expect(locatorOf(this.branchDialog, 'repo.text.by-branch-selected', branch).first()).toBeVisible();
     await this.branchDone.click();
     await expect(this.branchDialog).toBeHidden();
   }
@@ -287,7 +287,7 @@ export class RepoPage {
       return;
     }
     await this.openBranchDialog();
-    await expect(this.branchDialog.getByText(new RegExp(`${esc(branch)}\\s+selected`, 'i')).first()).toBeVisible();
+    await expect(locatorOf(this.branchDialog, 'repo.text.by-branch-selected', branch).first()).toBeVisible();
     await this.branchDone.click();
     await expect(this.branchDialog).toBeHidden();
   }

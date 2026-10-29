@@ -6,7 +6,7 @@ import { inputs } from '../flow/helpers';
 import { RepoPage } from '../repo/shared/RepoPage';
 import { obj as locatorOf } from '../../core/keywords/obj';
 
-import { expected as expectedOf } from '../../core/keywords/expected';
+import { expected as expectedOf, listOf } from '../../core/keywords/expected';
 /**
  * The Dashboard module: the "Runs Dashboard" page (/dashboard) - the list of runs of the current repository / branch, the "RUNS FROM"
  * selector, the "CURRENT EXECUTION" card and "View run details". Verified live. Checks use locators (roles, text, table cells) and the
@@ -23,7 +23,7 @@ const pageTitle = (page: Page) => labelText(page, 'PR Confidence Analysis').firs
 const dashTitle = (page: Page) => locatorOf(page, 'dashboard.heading.runs-dashboard').first();
 const currentText = (page: Page) => locatorOf(page, 'dashboard.text.current-repository').first();
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const COLUMNS = ['Run ID', 'Attempt', 'Project', 'Branch', 'Commit', 'Status', 'Score', 'Tasks', 'Created'];
+const COLUMNS = listOf('dashboard.list.columns');
 
 interface Row { runId: string; attempt: string; project: string; branch: string; commit: string; status: string; score: string; tasks: string; created: string; href: string }
 interface ApiRun { run_id: string; repository_id: string; branch_name: string; commit_sha: string; attempt_number: number; overall_score: number | null; completed_tasks: number; total_tasks: number; created_at: string; status: string }
@@ -108,9 +108,9 @@ export const dashboardSteps: Record<string, CaseHandler<RepoPage>> = {
     await snap('Left menu of the Dashboard', page.getByRole('link', { name: exactText('Dashboard') }).first());
     for (const [name, href] of [['Dashboard', '/dashboard'], ['Confidence Engine', '/confidence-engine'], ['Execution Assistant', '/execution-assistant'], ['Account and Plan', '/account']] as const) {
       await check(`Left menu link "${name}" is shown and goes to ${href}`, async () => {
-        const link = page.getByRole('link', { name: exactText(name) }).first();
+        const link = locatorOf(page, 'dashboard.link.by-name', name).first();
         await expect(link).toBeVisible();
-        await expect(link).toHaveAttribute('href', new RegExp(`^${href}`));
+        await expect(link).toHaveAttribute('href', expectedOf('dashboard.attr.by-pattern-href', href));
       });
     }
     await check('The "Testable" logo link goes to the Confidence Engine', async () => {
@@ -133,7 +133,7 @@ export const dashboardSteps: Record<string, CaseHandler<RepoPage>> = {
     const pair = `${repo.split('/').pop()} / ${branch}`;
     await snap('CURRENT EXECUTION card with "Start analysis" (not clicked)', [locatorOf(page, 'dashboard.text.current-execution').first(), startBtn(page)]);
     await check('"CURRENT EXECUTION" is shown', () => expect(locatorOf(page, 'dashboard.text.current-execution').first()).toBeVisible());
-    await check(`It names the current pair "${pair}"`, () => expect(page.getByText(exactText(pair)).last()).toBeVisible());
+    await check(`It names the current pair "${pair}"`, () => expect(locatorOf(page, 'dashboard.text.by-pair', pair).last()).toBeVisible());
     await check('"Start analysis" is shown and enabled (it is NOT clicked: it would start a real run)', async () => {
       await expect(startBtn(page)).toBeVisible();
       await expect(startBtn(page)).toBeEnabled();
@@ -180,7 +180,7 @@ export const dashboardSteps: Record<string, CaseHandler<RepoPage>> = {
       await expect(locatorOf(page, 'dashboard.text.runs-from').first()).toBeVisible();
       await expect(sel).toBeVisible();
     });
-    await check(`The selector shows "Current: ${name} / ${branch}"`, () => expect(sel).toContainText(new RegExp(`Current:\\s*${esc(name)}\\s*/\\s*${esc(branch)}`, 'i')));
+    await check(`The selector shows "Current: ${name} / ${branch}"`, () => expect(sel).toContainText(expectedOf('dashboard.text.by-current-name-branch', name, branch)));
     await ctx.step('Open the selector', async () => {
       await sel.click();
       await expect(locatorOf(page, 'dashboard.listbox.item')).toBeVisible({ timeout: 10_000 });
@@ -233,7 +233,7 @@ export const dashboardSteps: Record<string, CaseHandler<RepoPage>> = {
     if (!other) { await page.keyboard.press('Escape'); ctx.skip('This repository has no other branch with a run, so there is nothing else to choose.'); }
     const chosen = other!.slice(`${name} / `.length);
     await ctx.step(`Choose "${other}"`, async () => {
-      await page.getByRole('option', { name: exactText(other!) }).first().click();
+      await locatorOf(page, 'dashboard.option.by-other', other!).first().click();
       await expect(sel).toContainText(new RegExp(esc(other!).replace(/\s+/g, '\\s+'), 'i'), { timeout: 15_000 });
       await expect(locatorOf(page, 'dashboard.text.previous-branch').first()).toBeVisible({ timeout: 20_000 });
     });
@@ -254,13 +254,13 @@ export const dashboardSteps: Record<string, CaseHandler<RepoPage>> = {
       if (a !== b) note(`The run ids shown (${a}) differ from the run list (${b}).`);
     }
     await check('"CURRENT EXECUTION" still shows the current pair and "Start analysis" is still offered (not clicked)', async () => {
-      await expect(page.getByText(exactText(`${name} / ${branch}`)).last()).toBeVisible();
+      await expect(locatorOf(page, 'dashboard.text.by-name-branch', name, branch).last()).toBeVisible();
       await expect(startBtn(page)).toBeEnabled();
     });
     await ctx.step('Choose the current pair again', async () => {
       await sel.click();
       await locatorOf(page, 'dashboard.option.current').first().click();
-      await expect(sel).toContainText(new RegExp(`Current:\\s*${esc(name)}\\s*/\\s*${esc(branch)}`, 'i'), { timeout: 15_000 });
+      await expect(sel).toContainText(expectedOf('dashboard.text.by-current-name-branch', name, branch), { timeout: 15_000 });
     });
     await check('The list of the current branch is shown again with the same runs and no "previous branch" note', async () => {
       await expect.poll(async () => (await heading(page)).note, { timeout: 15_000 }).not.toMatch(/previous branch/i);
