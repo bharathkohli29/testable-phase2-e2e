@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { Frame, FrameLocator, Locator, Page } from '@playwright/test';
 import { ROOT } from '../paths';
-import { traced } from '../reporting/trace';
+import { traced, type Fallback } from '../reporting/trace';
 
 /**
  * THE OBJECT REPOSITORY.
@@ -20,6 +20,8 @@ import { traced } from '../reporting/trace';
  *           pick: "first" (default) | "last" | "all" (no narrowing) | <number>   which one when several match
  *           danger: "<reason>"           the Click keyword refuses to press it (it would start / cancel / send / create something)
  *           note: "..."                  free text for people
+ *           fallback: [ {...}, {...} ]   other ways of finding the SAME element, tried (in order) only when an action fails because the main
+ *                                        one is not on the page. A fallback that works is reported as "Healed" and written to healed.jsonl.
  * Entries whose name starts with "_" are comments and are ignored.
  */
 export interface ObjectDef {
@@ -46,6 +48,8 @@ export interface ObjectDef {
   disabled?: boolean;
   includeHidden?: boolean;
   within?: string;
+  /** Other ways of finding the SAME element. Used only when an action fails because the main one is not on the page (self-healing); the use is reported. */
+  fallback?: Array<Omit<ObjectDef, 'fallback' | 'within' | 'pick' | 'danger' | 'note'>>;
   pick?: 'first' | 'last' | 'all' | number;
   danger?: string;
   note?: string;
@@ -100,6 +104,15 @@ export function loadObjects(dir: string = OBJECTS_DIR): ObjectRepo {
     if (def.name !== undefined && def.role === undefined) problems.push(`${where}: "name" is only used together with "role"`);
     if (def.match !== undefined && !MATCHES.includes(def.match)) problems.push(`${where}: match must be one of ${MATCHES.join(', ')}`);
     if (def.pick !== undefined && !(def.pick === 'first' || def.pick === 'last' || def.pick === 'all' || Number.isInteger(def.pick))) problems.push(`${where}: pick must be first, last, all or a number`);
+    if (def.fallback !== undefined) {
+      if (!Array.isArray(def.fallback)) problems.push(`${where}: fallback must be a list`);
+      else def.fallback.forEach((fb, i) => {
+        const k = KINDS.filter((x) => fb && (fb as ObjectDef)[x] !== undefined);
+        if (!fb || typeof fb !== 'object' || k.length !== 1) problems.push(`${where}: fallback ${i + 1} needs exactly one of ${KINDS.join(' / ')}`);
+        else if (fb.role !== undefined && !ROLES.has(fb.role)) problems.push(`${where}: fallback ${i + 1} has unknown role "${fb.role}"`);
+        else if (fb.match !== undefined && !MATCHES.includes(fb.match)) problems.push(`${where}: fallback ${i + 1}: match must be one of ${MATCHES.join(', ')}`);
+      });
+    }
     if (def.within !== undefined && !repo[def.within]) problems.push(`${where}: within "${def.within}" is not defined`);
     if (def.match === 'regex') {
       for (const t of arr(def.name ?? def.text ?? def.placeholder ?? def.label)) {
@@ -228,6 +241,11 @@ export function locate(page: Scope, repo: ObjectRepo, name: string, opts: { all?
   else loc = names.map((n) => one(n)).reduce((a, b) => a.or(b));
   const pick = def.pick ?? 'first';
   const label = `${name} — ${summaryOf(def)}`;
-  if (opts.all || pick === 'all') return traced(loc, label);
-  return traced(pick === 'first' ? loc.first() : pick === 'last' ? loc.last() : loc.nth(pick), label);
+  const choose = (l: Locator): Locator => (opts.all || pick === 'all' ? l : pick === 'first' ? l.first() : pick === 'last' ? l.last() : l.nth(pick));
+  const fallbacks: Fallback[] = (raw.fallback ?? []).map((fb, i) => {
+    const sub = { ...fb, within: raw.within, pick: raw.pick } as ObjectDef;
+    const l = locate(page, { ...repo, [`${name}#fallback${i + 1}`]: sub }, `${name}#fallback${i + 1}`, { ...opts, args });
+    return { loc: l, label: summaryOf({ ...fb, name: f(fb.name) as string | string[] | undefined, text: f(fb.text) as string | string[] | undefined } as ObjectDef) };
+  });
+  return traced(choose(loc), label, fallbacks);
 }

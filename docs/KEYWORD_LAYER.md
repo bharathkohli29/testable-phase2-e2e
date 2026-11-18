@@ -90,3 +90,21 @@ How a `{{0}}` is filled: the value comes from the call. In a regular expression 
 (`npm run report -- results\run_<time>` for another one). It shows, per module: the cases with PASS / FAIL / SKIPPED,
 every check and step, every locator action (`Click · <repository key> — <what it finds>`), the expected result,
 the actual result and the screenshot of each case. Passwords, keys and e-mails are replaced by ******** in the text.
+
+## Self-healing (fallback locators) and the code check
+
+**Fallback locators.** Any entry in `objects/*.json` may list other ways of finding the SAME element:
+
+```json
+"login.button.submit": { "role": "button", "name": "Submit", "fallback": [ { "role": "button", "name": "Sign in" }, { "css": "#login-submit" } ] }
+```
+
+Only when a click / fill / press / wait fails because the main locator is not on the page, the same action is tried with each fallback in order.
+A fallback that works shows in the Allure report as `Healed · <key> not found, used fallback N: ...` and is written to `results/run_<time>/healed.jsonl`.
+A person then decides to make it the main locator. Nothing changes for entries without `fallback`. `SELF_HEAL=off` (in `.env`) switches it off.
+It covers actions, not checks (`expect(...)`): a missing element in a check is still reported as a failed check.
+
+**Code check.** `npm run lint` reads the code with ESLint and eslint-plugin-playwright (missing `await`, fixed waits, force clicks, unused variables).
+It never runs the tests. Currently 0 errors; the warnings are a to-do list.
+
+Left out on purpose: AI-based healing libraries (healwright and similar) and healenium-js - small projects, not tried here, and they can click the wrong element without telling anyone.

@@ -17,16 +17,21 @@
     "secrets:check": "ts-node scripts/secrets.ts check",
     "objects:update": "ts-node scripts/updateObjects.ts",
     "locators:check": "ts-node scripts/checkLocators.ts",
-    "report:playwright": "playwright show-report"
+    "report:playwright": "playwright show-report",
+    "lint": "eslint ."
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@playwright/test": "^1.62.0",
     "@types/node": "^20.14.0",
     "allure": "^3.22.1",
     "allure-playwright": "^3.14.0",
+    "eslint": "^9.39.5",
+    "eslint-plugin-playwright": "^2.12.1",
     "exceljs": "^4.4.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.5.4",
+    "typescript-eslint": "^8.72.1",
     "xlsx": "^0.18.5"
   }
 }
